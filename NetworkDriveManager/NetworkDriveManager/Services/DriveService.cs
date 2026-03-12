@@ -125,10 +125,11 @@ public static class DriveService
             else if (PlatformService.IsMacOS)
             {
                 var mountPoint = GetMountPoint(letter);
-                Directory.CreateDirectory(mountPoint);
+                EnsureMountPointExists(mountPoint);
 
-                var smbUrl = $"//{username}:{password}@{server}/{share}";
-                var result = RunCommand("mount", $"-t smbfs {smbUrl} {mountPoint}", timeout: 30);
+                // Use osascript to mount via Finder API to avoid exposing credentials in process list
+                var smbUrl = $"smb://{username}:{password}@{server}/{share}";
+                var result = RunCommand("osascript", $"-e \"mount volume \\\"{smbUrl}\\\"\" 2>/dev/null || mount -t smbfs //{username}@{server}/{share} {mountPoint}", timeout: 30);
                 var msg = !string.IsNullOrWhiteSpace(result.Output) ? result.Output
                         : !string.IsNullOrWhiteSpace(result.Error) ? result.Error : string.Empty;
 
@@ -142,18 +143,31 @@ public static class DriveService
             else // Linux
             {
                 var mountPoint = GetMountPoint(letter);
-                Directory.CreateDirectory(mountPoint);
+                EnsureMountPointExists(mountPoint);
 
-                var result = RunCommand("mount", $"-t cifs //{server}/{share} {mountPoint} -o username={username},password={password}", timeout: 30);
-                var msg = !string.IsNullOrWhiteSpace(result.Output) ? result.Output
-                        : !string.IsNullOrWhiteSpace(result.Error) ? result.Error : string.Empty;
+                // Use a temporary credentials file to avoid exposing credentials in process list
+                var credFile = Path.GetTempFileName();
+                try
+                {
+                    File.WriteAllText(credFile, $"username={username}\npassword={password}\n");
+                    // Set restrictive permissions (owner-only read/write)
+                    RunCommand("chmod", $"600 {credFile}", timeout: 5);
 
-                if (result.ExitCode == 0)
-                    LogService.Info($"Successfully mounted {letter} at {mountPoint}");
-                else
-                    LogService.Error($"Failed to mount {letter}: {msg}");
+                    var result = RunCommand("mount", $"-t cifs //{server}/{share} {mountPoint} -o credentials={credFile}", timeout: 30);
+                    var msg = !string.IsNullOrWhiteSpace(result.Output) ? result.Output
+                            : !string.IsNullOrWhiteSpace(result.Error) ? result.Error : string.Empty;
 
-                return (result.ExitCode == 0, msg.Trim());
+                    if (result.ExitCode == 0)
+                        LogService.Info($"Successfully mounted {letter} at {mountPoint}");
+                    else
+                        LogService.Error($"Failed to mount {letter}: {msg}");
+
+                    return (result.ExitCode == 0, msg.Trim());
+                }
+                finally
+                {
+                    try { File.Delete(credFile); } catch { /* best effort cleanup */ }
+                }
             }
         }
         catch (TimeoutException)
@@ -196,7 +210,8 @@ public static class DriveService
                 {
                     LogService.Info($"Successfully unmounted {letter} from {mountPoint}");
                     // Clean up empty mount point directory
-                    try { if (Directory.Exists(mountPoint)) Directory.Delete(mountPoint); } catch { }
+                    try { if (Directory.Exists(mountPoint)) Directory.Delete(mountPoint); }
+                    catch (Exception ex) { LogService.Debug($"Could not remove mount point {mountPoint}: {ex.Message}"); }
                 }
                 else
                     LogService.Error($"Failed to unmount {letter}: {msg}");
@@ -256,6 +271,22 @@ public static class DriveService
         var skipped = Math.Max(0, netUseLines.Count - drives.Count);
         LogService.Info($"Parsed {drives.Count} drive(s) from import ({skipped} line(s) skipped)");
         return (drives, skipped);
+    }
+
+    /// <summary>
+    /// Creates the mount point directory if it does not exist, with a descriptive error on failure.
+    /// </summary>
+    private static void EnsureMountPointExists(string mountPoint)
+    {
+        try
+        {
+            Directory.CreateDirectory(mountPoint);
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException(
+                $"Failed to create mount point directory at {mountPoint}: {ex.Message}", ex);
+        }
     }
 
     private static (int ExitCode, string Output, string Error) RunCommand(string fileName, string arguments, int timeout = 10)
