@@ -18,24 +18,32 @@ jobs:
           - os: windows-latest
             rid: win-x64
             artifact: NetworkDriveManager-windows-x64
+            installer_script: install.ps1
+            uninstaller_script: uninstall.ps1
           - os: macos-latest
             rid: osx-x64
             artifact: NetworkDriveManager-macos-x64
+            installer_script: install-macos.sh
+            uninstaller_script: uninstall-macos.sh
           - os: macos-latest
             rid: osx-arm64
             artifact: NetworkDriveManager-macos-arm64
+            installer_script: install-macos.sh
+            uninstaller_script: uninstall-macos.sh
           - os: ubuntu-latest
             rid: linux-x64
             artifact: NetworkDriveManager-linux-x64
+            installer_script: install-linux.sh
+            uninstaller_script: uninstall-linux.sh
 
     runs-on: ${{ matrix.os }}
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '10.0.x'
 
@@ -55,16 +63,25 @@ jobs:
           -p:PublishSingleFile=true
           -p:IncludeNativeLibrariesForSelfExtract=true
 
+      - name: Include installer scripts
+        shell: bash
+        run: |
+          cp installers/${{ matrix.installer_script }} ./publish/${{ matrix.artifact }}/
+          cp installers/${{ matrix.uninstaller_script }} ./publish/${{ matrix.artifact }}/
+
       - name: Archive (Windows)
         if: runner.os == 'Windows'
         run: Compress-Archive -Path ./publish/${{ matrix.artifact }}/* -DestinationPath ./${{ matrix.artifact }}.zip
 
       - name: Archive (Linux/macOS)
         if: runner.os != 'Windows'
-        run: cd ./publish && tar -czf ../${{ matrix.artifact }}.tar.gz ${{ matrix.artifact }}
+        run: |
+          chmod +x ./publish/${{ matrix.artifact }}/${{ matrix.installer_script }}
+          chmod +x ./publish/${{ matrix.artifact }}/${{ matrix.uninstaller_script }}
+          cd ./publish && tar -czf ../${{ matrix.artifact }}.tar.gz ${{ matrix.artifact }}
 
       - name: Upload build artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.artifact }}
           path: |
@@ -79,7 +96,7 @@ jobs:
 
     steps:
       - name: Download all artifacts
-        uses: actions/download-artifact@v4.1.7
+        uses: actions/download-artifact@v8
         with:
           path: artifacts
 

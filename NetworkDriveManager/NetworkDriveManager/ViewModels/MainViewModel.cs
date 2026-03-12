@@ -124,6 +124,19 @@ public class DriveRowViewModel : ObservableObject
 
     /// <summary>Initializes a new drive row view model from the given configuration.</summary>
     public DriveRowViewModel(DriveConfig config) => Config = config;
+
+    /// <summary>
+    /// Forces a re-evaluation of all toggle-related bindings to sync the ToggleButton visual state.
+    /// Call this after an operation completes (success or failure) to ensure the UI reflects the actual state.
+    /// </summary>
+    public void RefreshToggleState()
+    {
+        OnPropertyChanged(nameof(IsConnected));
+        OnPropertyChanged(nameof(ToggleButtonText));
+        OnPropertyChanged(nameof(ToggleButtonColor));
+        OnPropertyChanged(nameof(StatusText));
+        OnPropertyChanged(nameof(StatusColor));
+    }
 }
 
 /// <summary>
@@ -558,7 +571,11 @@ public class MainViewModel : ObservableObject
             }
             finally
             {
-                _dispatcher.Invoke(() => IsBusy = false);
+                _dispatcher.Invoke(() =>
+                {
+                    row.RefreshToggleState();
+                    IsBusy = false;
+                });
             }
         });
     }
