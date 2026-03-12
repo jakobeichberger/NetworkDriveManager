@@ -1,6 +1,6 @@
 #!/bin/bash
 # NetworkDriveManager macOS Installer
-# Usage: sudo bash install.sh
+# Usage: sudo bash install-macos.sh
 
 set -e
 
@@ -14,7 +14,7 @@ echo ""
 
 if [ "$(id -u)" -ne 0 ]; then
     echo "Error: This script must be run with sudo."
-    echo "Usage: sudo bash install.sh"
+    echo "Usage: sudo bash install-macos.sh"
     exit 1
 fi
 
@@ -31,7 +31,7 @@ mkdir -p "$INSTALL_DIR"
 # Copy application files
 echo "Copying files..."
 cp -R "$SCRIPT_DIR"/* "$INSTALL_DIR/"
-rm -f "$INSTALL_DIR/install.sh" "$INSTALL_DIR/uninstall.sh"
+rm -f "$INSTALL_DIR/install-macos.sh"
 
 # Make the binary executable
 chmod +x "$INSTALL_DIR/$APP_NAME"

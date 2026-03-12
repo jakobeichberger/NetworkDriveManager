@@ -1,6 +1,6 @@
 #!/bin/bash
 # NetworkDriveManager Linux Installer
-# Usage: sudo bash install.sh
+# Usage: sudo bash install-linux.sh
 #
 # This script installs the application and creates a .desktop file
 # for easy launching from the application menu.
@@ -19,7 +19,7 @@ echo ""
 
 if [ "$(id -u)" -ne 0 ]; then
     echo "Error: This script must be run with sudo."
-    echo "Usage: sudo bash install.sh"
+    echo "Usage: sudo bash install-linux.sh"
     exit 1
 fi
 
@@ -55,7 +55,7 @@ mkdir -p "$INSTALL_DIR"
 # Copy application files
 echo "Copying files..."
 cp -R "$SCRIPT_DIR"/* "$INSTALL_DIR/"
-rm -f "$INSTALL_DIR/install.sh" "$INSTALL_DIR/uninstall.sh"
+rm -f "$INSTALL_DIR/install-linux.sh"
 
 # Make the binary executable
 chmod +x "$INSTALL_DIR/$BINARY_NAME"

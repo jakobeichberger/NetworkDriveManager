@@ -1,6 +1,6 @@
 #!/bin/bash
 # NetworkDriveManager Linux Uninstaller
-# Usage: sudo bash uninstall.sh
+# Usage: sudo bash uninstall-linux.sh
 
 set -e
 
@@ -14,7 +14,7 @@ echo ""
 
 if [ "$(id -u)" -ne 0 ]; then
     echo "Error: This script must be run with sudo."
-    echo "Usage: sudo bash uninstall.sh"
+    echo "Usage: sudo bash uninstall-linux.sh"
     exit 1
 fi
 

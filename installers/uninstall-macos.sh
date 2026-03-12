@@ -1,6 +1,6 @@
 #!/bin/bash
 # NetworkDriveManager macOS Uninstaller
-# Usage: sudo bash uninstall.sh
+# Usage: sudo bash uninstall-macos.sh
 
 set -e
 
@@ -13,7 +13,7 @@ echo ""
 
 if [ "$(id -u)" -ne 0 ]; then
     echo "Error: This script must be run with sudo."
-    echo "Usage: sudo bash uninstall.sh"
+    echo "Usage: sudo bash uninstall-macos.sh"
     exit 1
 fi
 
