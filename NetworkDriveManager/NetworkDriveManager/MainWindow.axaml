@@ -1,0 +1,227 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="NetworkDriveManager.MainWindow"
+        Title="{Binding WindowTitle}"
+        MinHeight="420" MinWidth="560"
+        Height="640" Width="620"
+        WindowStartupLocation="CenterScreen"
+        Background="#f5f7fa">
+
+    <DockPanel LastChildFill="True">
+
+        <!-- STATUS BAR (bottom) -->
+        <Border DockPanel.Dock="Bottom" BorderBrush="#d1d5db" BorderThickness="0,1,0,0">
+            <Border Background="#e8edf2" Padding="8,4">
+                <TextBlock Text="{Binding StatusMessage}" FontSize="9"
+                           Foreground="{Binding StatusColor}" TextWrapping="Wrap"/>
+            </Border>
+        </Border>
+
+        <!-- HEADER BANNER -->
+        <Border DockPanel.Dock="Top" Background="#c62828" Padding="12,8">
+            <StackPanel Orientation="Horizontal">
+                <Image x:Name="LogoImage" Height="72" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="{Binding WindowTitle}" Foreground="White"
+                               FontSize="18" FontWeight="Bold"/>
+                    <TextBlock Text="{Binding AppSubtitle}" Foreground="White"
+                               FontSize="10"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- TOOLBAR -->
+        <DockPanel DockPanel.Dock="Top" Margin="10,5,10,0">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" DockPanel.Dock="Right">
+                <Button Content="{Binding SettingsText}"
+                        Command="{Binding OpenSettingsCommand}" Margin="0,0,5,0" MinWidth="85"
+                        Background="Transparent" Foreground="#c62828"
+                        BorderBrush="#c62828" BorderThickness="1" Padding="14,6" FontSize="12"/>
+                <Button Content="{Binding HelpText}"
+                        Command="{Binding OpenHelpCommand}" Margin="0,0,5,0" MinWidth="60"
+                        Background="Transparent" Foreground="#c62828"
+                        BorderBrush="#c62828" BorderThickness="1" Padding="14,6" FontSize="12"/>
+                <Button Content="{Binding LangButtonText}"
+                        Command="{Binding ToggleLanguageCommand}" MinWidth="85"
+                        Background="#c62828" Foreground="White"
+                        BorderThickness="0" Padding="14,6" FontSize="12"/>
+            </StackPanel>
+            <TextBlock/>
+        </DockPanel>
+
+        <!-- SCROLLABLE CONTENT -->
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Margin="10,5,10,10">
+
+                <!-- CREDENTIALS SECTION -->
+                <TextBlock Text="{Binding CredentialsHeader}" Foreground="#c62828"
+                           FontSize="11" FontWeight="Bold" Margin="5,5,0,3"/>
+                <Border Background="White" BorderBrush="#d1d5db" BorderThickness="1" CornerRadius="6"
+                        Padding="10">
+                    <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
+
+                        <!-- Username -->
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding UsernameLabel}"
+                                   FontSize="10" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Username}"
+                                 FontSize="10" Padding="4,3"/>
+                        <TextBlock Grid.Row="0" Grid.Column="2" Text="●" FontSize="10"
+                                   Foreground="{Binding UsernameIndicatorColor}" VerticalAlignment="Center"
+                                   Margin="4,0,0,0"/>
+                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding UsernameHintText}"
+                                   Foreground="{Binding UsernameHintColor}"
+                                   FontSize="8" Margin="0,1,0,4"/>
+
+                        <!-- Password -->
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="{Binding PasswordLabel}"
+                                   FontSize="10" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <TextBox Grid.Row="2" Grid.Column="1" x:Name="PasswordBox"
+                                 PasswordChar="•" RevealPassword="False"
+                                 Text="{Binding Password}"
+                                 FontSize="10" Padding="4,3"/>
+                        <TextBlock Grid.Row="2" Grid.Column="2" Text="●" FontSize="10"
+                                   Foreground="{Binding PasswordIndicatorColor}" VerticalAlignment="Center"
+                                   Margin="4,0,0,0"/>
+                        <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding PasswordHintText}"
+                                   Foreground="{Binding PasswordHintColor}"
+                                   FontSize="8" Margin="0,1,0,4"/>
+
+                        <!-- Save Credentials button -->
+                        <Button Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="3"
+                                Content="{Binding SaveCredentialsText}"
+                                Command="{Binding SaveCredentialsCommand}"
+                                HorizontalAlignment="Right" Margin="0,8,0,0"
+                                Background="#c62828" Foreground="White"
+                                BorderThickness="0" Padding="14,6" FontSize="12"/>
+                    </Grid>
+                </Border>
+
+                <!-- WARNINGS PANEL -->
+                <StackPanel IsVisible="{Binding HasWarnings}">
+                    <TextBlock Text="{Binding WarningsHeader}" Foreground="#e65100"
+                               FontSize="11" FontWeight="Bold" Margin="5,5,0,1"/>
+                    <Border Background="#fff3e0" BorderBrush="#ffb74d" BorderThickness="1"
+                            CornerRadius="6" Padding="5" Margin="0,0,0,5">
+                        <ItemsControl ItemsSource="{Binding Warnings}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <DockPanel Margin="3,2">
+                                        <Button DockPanel.Dock="Right" Content="×" FontSize="12"
+                                                Command="{Binding $parent[Window].DataContext.DismissWarningCommand}"
+                                                CommandParameter="{Binding Key}"
+                                                Background="Transparent" BorderThickness="0"
+                                                Foreground="#e65100" Padding="4,2" Margin="4,0,0,0"/>
+                                        <TextBlock Text="{Binding Message}" Foreground="#e65100"
+                                                   FontSize="10" TextWrapping="Wrap"/>
+                                    </DockPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </Border>
+                </StackPanel>
+
+                <!-- NETWORK DRIVES SECTION -->
+                <TextBlock Text="{Binding NetworkDrivesHeader}" Foreground="#c62828"
+                           FontSize="11" FontWeight="Bold" Margin="5,5,0,3"/>
+                <Border Background="#f5f7fa" BorderBrush="#d1d5db" BorderThickness="1" CornerRadius="6"
+                        Padding="5">
+                    <StackPanel>
+                        <!-- Header Row -->
+                        <Grid ColumnDefinitions="50,*,90,130,110" Margin="0,2,0,0">
+                            <TextBlock Grid.Column="0" Text="{Binding DriveHeader}"
+                                       FontWeight="Bold" FontSize="10"
+                                       Foreground="#374151" Margin="5,0,0,0"/>
+                            <TextBlock Grid.Column="1" Text="{Binding PathHeader}"
+                                       FontWeight="Bold" FontSize="10"
+                                       Foreground="#374151" Margin="10,0,0,0"/>
+                            <TextBlock Grid.Column="2" Text="{Binding StatusHeader}"
+                                       FontWeight="Bold" FontSize="10"
+                                       Foreground="#374151" Margin="10,0,0,0"/>
+                            <TextBlock Grid.Column="3" Text="{Binding ServerCheckHeader}"
+                                       FontWeight="Bold" FontSize="10"
+                                       Foreground="#374151" Margin="10,0,0,0"/>
+                            <TextBlock Grid.Column="4" Text="{Binding ActionHeader}"
+                                       FontWeight="Bold" FontSize="10"
+                                       Foreground="#374151" Margin="10,0,0,0"/>
+                        </Grid>
+
+                        <Separator Background="#d1d5db" Margin="5,5"/>
+
+                        <!-- Drive Rows -->
+                        <ItemsControl ItemsSource="{Binding DriveRows}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid ColumnDefinitions="50,*,90,130,110" Margin="0,2">
+
+                                        <!-- Drive Letter -->
+                                        <StackPanel Grid.Column="0" Orientation="Horizontal"
+                                                    VerticalAlignment="Center" Margin="5,0,0,0">
+                                            <TextBlock Text="{Binding Letter}" FontSize="10"/>
+                                            <TextBlock Text=":" FontSize="10"/>
+                                        </StackPanel>
+
+                                        <!-- Path -->
+                                        <TextBlock Grid.Column="1" Text="{Binding DisplayPath}"
+                                                   FontSize="10"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   VerticalAlignment="Center" Margin="10,0,0,0"/>
+
+                                        <!-- Status -->
+                                        <TextBlock Grid.Column="2" Text="{Binding StatusText}"
+                                                   Foreground="{Binding StatusColor}"
+                                                   FontSize="10"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center" Margin="10,0,0,0"/>
+
+                                        <!-- Server Check Button -->
+                                        <Button Grid.Column="3" Content="{Binding ServerCheckText}"
+                                                Command="{Binding $parent[Window].DataContext.CheckServerCommand}"
+                                                CommandParameter="{Binding}"
+                                                IsEnabled="{Binding $parent[Window].DataContext.IsNotBusy}"
+                                                FontSize="10" Margin="10,1,0,1"
+                                                Foreground="White" Padding="6,3"
+                                                Background="{Binding ServerCheckColor}"
+                                                BorderThickness="0" CornerRadius="4"/>
+
+                                        <!-- Toggle (Connect/Disconnect) Button -->
+                                        <Button Grid.Column="4" Content="{Binding ToggleButtonText}"
+                                                Command="{Binding $parent[Window].DataContext.ToggleDriveCommand}"
+                                                CommandParameter="{Binding}"
+                                                IsEnabled="{Binding $parent[Window].DataContext.IsNotBusy}"
+                                                FontSize="10" Margin="10,1,0,1"
+                                                Foreground="White" Padding="6,3"
+                                                Background="{Binding ToggleButtonColor}"
+                                                BorderThickness="0" CornerRadius="4"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <!-- ACTION BUTTONS -->
+                <DockPanel Margin="0,8,0,0">
+                    <Button DockPanel.Dock="Right" Content="{Binding RefreshStatusText}"
+                            Command="{Binding RefreshStatusCommand}"
+                            IsEnabled="{Binding IsNotBusy}"
+                            Background="Transparent" Foreground="#374151"
+                            BorderBrush="#d1d5db" BorderThickness="1" Padding="14,6" FontSize="12"/>
+                    <StackPanel Orientation="Horizontal">
+                        <Button Content="{Binding ConnectAllText}"
+                                Command="{Binding ConnectAllCommand}"
+                                IsEnabled="{Binding IsNotBusy}" Margin="0,0,5,0"
+                                Background="#c62828" Foreground="White"
+                                BorderThickness="0" Padding="14,6" FontSize="12"/>
+                        <Button Content="{Binding DisconnectAllText}"
+                                Command="{Binding DisconnectAllCommand}"
+                                IsEnabled="{Binding IsNotBusy}"
+                                Background="Transparent" Foreground="#c62828"
+                                BorderBrush="#c62828" BorderThickness="1" Padding="14,6" FontSize="12"/>
+                    </StackPanel>
+                </DockPanel>
+
+            </StackPanel>
+        </ScrollViewer>
+
+    </DockPanel>
+</Window>

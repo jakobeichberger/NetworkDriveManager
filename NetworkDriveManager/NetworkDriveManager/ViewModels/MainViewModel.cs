@@ -1,7 +1,6 @@
 using System.Collections.ObjectModel;
-using System.Windows;
 using System.Windows.Input;
-using System.Windows.Threading;
+using Avalonia.Threading;
 using NetworkDriveManager.Helpers;
 using NetworkDriveManager.Models;
 using NetworkDriveManager.Services;
@@ -149,7 +148,7 @@ public class WarningItem : ObservableObject
 /// </summary>
 public class MainViewModel : ObservableObject
 {
-    /// <summary>WPF dispatcher for UI thread marshalling.</summary>
+    /// <summary>Avalonia dispatcher for UI thread marshalling.</summary>
     private readonly Dispatcher _dispatcher;
     /// <summary>Timer for periodic drive monitoring.</summary>
     private System.Threading.Timer? _monitorTimer;
@@ -370,7 +369,7 @@ public class MainViewModel : ObservableObject
     /// <summary>Initializes the view model, loads drives and credentials, and starts background monitoring.</summary>
     public MainViewModel()
     {
-        _dispatcher = Dispatcher.CurrentDispatcher;
+        _dispatcher = Dispatcher.UIThread;
 
         ToggleLanguageCommand = new RelayCommand(ToggleLanguage);
         SaveCredentialsCommand = new RelayCommand(DoSaveCredentials);
