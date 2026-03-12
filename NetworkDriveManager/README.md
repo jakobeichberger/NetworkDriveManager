@@ -235,6 +235,16 @@ NetworkDriveManager/
 | **Credentials not saved** | Make sure the directory containing the executable is writable |
 | **Log file growing too large** | Logs rotate automatically at 1 MB; you can also clear logs from the Settings dialog |
 
+## Documentation
+
+For detailed documentation, visit the [**Project Site**](https://jakobeichberger.github.io/NetworkDriveManager/):
+
+- [Installation Guide](https://jakobeichberger.github.io/NetworkDriveManager/installation) — platform-specific download and install instructions
+- [Configuration](https://jakobeichberger.github.io/NetworkDriveManager/configuration) — drive definitions and settings reference
+- [Architecture](https://jakobeichberger.github.io/NetworkDriveManager/architecture) — MVVM pattern, project structure, and CI/CD pipeline
+- [Security](https://jakobeichberger.github.io/NetworkDriveManager/security) — credential encryption and data protection
+- [Troubleshooting](https://jakobeichberger.github.io/NetworkDriveManager/troubleshooting) — common problems and solutions
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on how to contribute to this project.
