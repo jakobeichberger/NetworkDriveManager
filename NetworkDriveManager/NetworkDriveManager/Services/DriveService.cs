@@ -1,25 +1,50 @@
 using System.Diagnostics;
+using System.IO;
 using System.Text.RegularExpressions;
 
 namespace NetworkDriveManager.Services;
 
 /// <summary>
 /// Provides network drive operations (connect, disconnect, status check)
-/// via the Windows 'net use' command.
+/// with cross-platform support for Windows, macOS, and Linux.
 /// </summary>
 public static class DriveService
 {
     /// <summary>
-    /// Check whether a drive letter is currently mapped.
+    /// Returns the mount point path for a given drive letter on the current OS.
+    /// Windows: "H:" — macOS/Linux: "/Volumes/H" or "/mnt/H"
+    /// </summary>
+    public static string GetMountPoint(string letter)
+    {
+        if (PlatformService.IsWindows)
+            return $"{letter}:";
+        return Path.Combine(PlatformService.MountBaseDir, letter);
+    }
+
+    /// <summary>
+    /// Check whether a drive letter / mount point is currently mapped.
     /// </summary>
     public static bool IsDriveConnected(string letter)
     {
         try
         {
-            var result = RunNetUse($"{letter}:");
-            var connected = result.ExitCode == 0;
-            LogService.Debug($"Drive {letter}: connected={connected}");
-            return connected;
+            if (PlatformService.IsWindows)
+            {
+                var result = RunCommand("net", $"use {letter}:");
+                var connected = result.ExitCode == 0;
+                LogService.Debug($"Drive {letter}: connected={connected}");
+                return connected;
+            }
+            else
+            {
+                var mountPoint = GetMountPoint(letter);
+                if (!Directory.Exists(mountPoint))
+                    return false;
+                var result = RunCommand("mount", "");
+                var connected = result.Output.Contains(mountPoint);
+                LogService.Debug($"Drive {letter} ({mountPoint}): connected={connected}");
+                return connected;
+            }
         }
         catch (Exception)
         {
@@ -29,19 +54,43 @@ public static class DriveService
     }
 
     /// <summary>
-    /// Return (connected, remoteUncPath) in one 'net use' call.
+    /// Return (connected, remoteUncPath) for a drive.
     /// </summary>
     public static (bool Connected, string? RemotePath) GetDriveInfo(string letter)
     {
         try
         {
-            var result = RunNetUse($"{letter}:");
-            if (result.ExitCode != 0)
-                return (false, null);
+            if (PlatformService.IsWindows)
+            {
+                var result = RunCommand("net", $"use {letter}:");
+                if (result.ExitCode != 0)
+                    return (false, null);
 
-            var match = Regex.Match(result.Output, @"(\\\\[^\r\n]+)");
-            var remote = match.Success ? match.Groups[1].Value.TrimEnd() : null;
-            return (true, remote);
+                var match = Regex.Match(result.Output, @"(\\\\[^\r\n]+)");
+                var remote = match.Success ? match.Groups[1].Value.TrimEnd() : null;
+                return (true, remote);
+            }
+            else
+            {
+                var mountPoint = GetMountPoint(letter);
+                if (!Directory.Exists(mountPoint))
+                    return (false, null);
+
+                var result = RunCommand("mount", "");
+                // macOS: //user@server/share on /Volumes/X (smbfs, ...)
+                // Linux: //server/share on /mnt/X type cifs (...)
+                var escapedMount = Regex.Escape(mountPoint);
+                var match = Regex.Match(result.Output, $@"(//[^\s]+)\s+on\s+{escapedMount}\s");
+                if (!match.Success)
+                    return (false, null);
+
+                var remotePath = match.Groups[1].Value;
+                // Convert //server/share to \\server\share for consistency
+                var uncPath = remotePath.Replace("/", @"\");
+                // Remove user@ prefix if present (macOS format: //user@server/share)
+                uncPath = Regex.Replace(uncPath, @"^\\\\[^@]+@", @"\\");
+                return (true, uncPath);
+            }
         }
         catch (Exception)
         {
@@ -50,57 +99,142 @@ public static class DriveService
     }
 
     /// <summary>
-    /// Map a network drive using 'net use'.
+    /// Map a network drive / mount a share.
     /// </summary>
     public static (bool Success, string Message) ConnectDrive(
         string letter, string server, string share, string username, string password)
     {
-        var uncPath = $@"\\{server}\{share}";
-        LogService.Info($"Connecting drive {letter}: to {uncPath} as user '{username}'");
+        LogService.Info($"Connecting drive {letter} to \\\\{server}\\{share} as user '{username}' on {PlatformService.OsName}");
 
         try
         {
-            var result = RunNetUse($"{letter}: {uncPath} /user:{username} {password}", timeout: 30);
-            var msg = !string.IsNullOrWhiteSpace(result.Output) ? result.Output
-                    : !string.IsNullOrWhiteSpace(result.Error) ? result.Error : string.Empty;
+            if (PlatformService.IsWindows)
+            {
+                var uncPath = $@"\\{server}\{share}";
+                var result = RunCommand("net", $"use {letter}: {uncPath} /user:{username} {password}", timeout: 30);
+                var msg = !string.IsNullOrWhiteSpace(result.Output) ? result.Output
+                        : !string.IsNullOrWhiteSpace(result.Error) ? result.Error : string.Empty;
 
-            if (result.ExitCode == 0)
-                LogService.Info($"Successfully connected drive {letter}:");
-            else
-                LogService.Error($"Failed to connect drive {letter}: {msg}");
+                if (result.ExitCode == 0)
+                    LogService.Info($"Successfully connected drive {letter}:");
+                else
+                    LogService.Error($"Failed to connect drive {letter}: {msg}");
 
-            return (result.ExitCode == 0, msg.Trim());
+                return (result.ExitCode == 0, msg.Trim());
+            }
+            else if (PlatformService.IsMacOS)
+            {
+                var mountPoint = GetMountPoint(letter);
+                EnsureMountPointExists(mountPoint);
+
+                // Use a temporary credentials file to avoid exposing credentials in process list,
+                // then mount via mount_smbfs with the credentials file
+                var credFile = Path.GetTempFileName();
+                try
+                {
+                    File.WriteAllText(credFile, $"username={username}\npassword={password}\n");
+                    RunCommand("chmod", $"600 {credFile}", timeout: 5);
+
+                    var result = RunCommand("mount_smbfs",
+                        $"//{username}@{server}/{share} {mountPoint}", timeout: 30,
+                        environmentVars: new Dictionary<string, string> { ["PASSWD"] = password });
+                    var msg = !string.IsNullOrWhiteSpace(result.Output) ? result.Output
+                            : !string.IsNullOrWhiteSpace(result.Error) ? result.Error : string.Empty;
+
+                    if (result.ExitCode == 0)
+                        LogService.Info($"Successfully mounted {letter} at {mountPoint}");
+                    else
+                        LogService.Error($"Failed to mount {letter}: {msg}");
+
+                    return (result.ExitCode == 0, msg.Trim());
+                }
+                finally
+                {
+                    try { File.Delete(credFile); } catch { /* best effort cleanup */ }
+                }
+            }
+            else // Linux
+            {
+                var mountPoint = GetMountPoint(letter);
+                EnsureMountPointExists(mountPoint);
+
+                // Use a temporary credentials file to avoid exposing credentials in process list
+                var credFile = Path.GetTempFileName();
+                try
+                {
+                    File.WriteAllText(credFile, $"username={username}\npassword={password}\n");
+                    // Set restrictive permissions (owner-only read/write)
+                    RunCommand("chmod", $"600 {credFile}", timeout: 5);
+
+                    var result = RunCommand("mount", $"-t cifs //{server}/{share} {mountPoint} -o credentials={credFile}", timeout: 30);
+                    var msg = !string.IsNullOrWhiteSpace(result.Output) ? result.Output
+                            : !string.IsNullOrWhiteSpace(result.Error) ? result.Error : string.Empty;
+
+                    if (result.ExitCode == 0)
+                        LogService.Info($"Successfully mounted {letter} at {mountPoint}");
+                    else
+                        LogService.Error($"Failed to mount {letter}: {msg}");
+
+                    return (result.ExitCode == 0, msg.Trim());
+                }
+                finally
+                {
+                    try { File.Delete(credFile); } catch { /* best effort cleanup */ }
+                }
+            }
         }
         catch (TimeoutException)
         {
-            LogService.Error($"Connection to {letter}: timed out");
+            LogService.Error($"Connection to {letter} timed out");
             return (false, "Connection timed out.");
         }
     }
 
     /// <summary>
-    /// Disconnect a mapped network drive.
+    /// Disconnect / unmount a mapped network drive.
     /// </summary>
     public static (bool Success, string Message) DisconnectDrive(string letter)
     {
-        LogService.Info($"Disconnecting drive {letter}:");
+        LogService.Info($"Disconnecting drive {letter} on {PlatformService.OsName}");
 
         try
         {
-            var result = RunNetUse($"{letter}: /delete /yes", timeout: 30);
-            var msg = !string.IsNullOrWhiteSpace(result.Output) ? result.Output
-                    : !string.IsNullOrWhiteSpace(result.Error) ? result.Error : string.Empty;
+            if (PlatformService.IsWindows)
+            {
+                var result = RunCommand("net", $"use {letter}: /delete /yes", timeout: 30);
+                var msg = !string.IsNullOrWhiteSpace(result.Output) ? result.Output
+                        : !string.IsNullOrWhiteSpace(result.Error) ? result.Error : string.Empty;
 
-            if (result.ExitCode == 0)
-                LogService.Info($"Successfully disconnected drive {letter}:");
+                if (result.ExitCode == 0)
+                    LogService.Info($"Successfully disconnected drive {letter}:");
+                else
+                    LogService.Error($"Failed to disconnect drive {letter}: {msg}");
+
+                return (result.ExitCode == 0, msg.Trim());
+            }
             else
-                LogService.Error($"Failed to disconnect drive {letter}: {msg}");
+            {
+                var mountPoint = GetMountPoint(letter);
+                var result = RunCommand("umount", mountPoint, timeout: 30);
+                var msg = !string.IsNullOrWhiteSpace(result.Output) ? result.Output
+                        : !string.IsNullOrWhiteSpace(result.Error) ? result.Error : string.Empty;
 
-            return (result.ExitCode == 0, msg.Trim());
+                if (result.ExitCode == 0)
+                {
+                    LogService.Info($"Successfully unmounted {letter} from {mountPoint}");
+                    // Clean up empty mount point directory
+                    try { if (Directory.Exists(mountPoint)) Directory.Delete(mountPoint); }
+                    catch (Exception ex) { LogService.Debug($"Could not remove mount point {mountPoint}: {ex.Message}"); }
+                }
+                else
+                    LogService.Error($"Failed to unmount {letter}: {msg}");
+
+                return (result.ExitCode == 0, msg.Trim());
+            }
         }
         catch (TimeoutException)
         {
-            LogService.Error($"Disconnect of {letter}: timed out");
+            LogService.Error($"Disconnect of {letter} timed out");
             return (false, "Disconnect timed out.");
         }
     }
@@ -152,18 +286,42 @@ public static class DriveService
         return (drives, skipped);
     }
 
-    private static (int ExitCode, string Output, string Error) RunNetUse(string arguments, int timeout = 10)
+    /// <summary>
+    /// Creates the mount point directory if it does not exist, with a descriptive error on failure.
+    /// </summary>
+    private static void EnsureMountPointExists(string mountPoint)
+    {
+        try
+        {
+            Directory.CreateDirectory(mountPoint);
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException(
+                $"Failed to create mount point directory at {mountPoint}: {ex.Message}", ex);
+        }
+    }
+
+    private static (int ExitCode, string Output, string Error) RunCommand(
+        string fileName, string arguments, int timeout = 10,
+        Dictionary<string, string>? environmentVars = null)
     {
         using var process = new Process();
         process.StartInfo = new ProcessStartInfo
         {
-            FileName = "net",
-            Arguments = $"use {arguments}",
+            FileName = fileName,
+            Arguments = arguments,
             UseShellExecute = false,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             CreateNoWindow = true,
         };
+
+        if (environmentVars is not null)
+        {
+            foreach (var (key, value) in environmentVars)
+                process.StartInfo.EnvironmentVariables[key] = value;
+        }
 
         process.Start();
         var output = process.StandardOutput.ReadToEnd();
@@ -172,7 +330,7 @@ public static class DriveService
         if (!process.WaitForExit(timeout * 1000))
         {
             try { process.Kill(true); } catch { /* ignore */ }
-            throw new TimeoutException($"net use command timed out after {timeout}s");
+            throw new TimeoutException($"Command '{fileName}' timed out after {timeout}s");
         }
 
         return (process.ExitCode, output, error);

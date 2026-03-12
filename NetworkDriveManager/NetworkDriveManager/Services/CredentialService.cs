@@ -30,6 +30,7 @@ public static class CredentialService
         var newKey = new byte[32];
         RandomNumberGenerator.Fill(newKey);
         File.WriteAllBytes(_keyFile, newKey);
+        SetRestrictivePermissions(_keyFile);
         LogService.Info($"Generated new encryption key at {_keyFile}");
         return newKey;
     }
@@ -57,8 +58,31 @@ public static class CredentialService
         fs.Write(nonce);
         fs.Write(tag);
         fs.Write(ciphertext);
+        fs.Close();
+        SetRestrictivePermissions(_credFile);
 
         LogService.Info($"Credentials saved (encrypted) for user '{username}'");
+    }
+
+    /// <summary>
+    /// Sets file permissions to owner-only (0600) on non-Windows platforms.
+    /// </summary>
+    private static void SetRestrictivePermissions(string filePath)
+    {
+        if (!PlatformService.IsWindows && File.Exists(filePath))
+        {
+            try
+            {
+#pragma warning disable CA1416 // Guarded by PlatformService.IsWindows check above
+                File.SetUnixFileMode(filePath,
+                    UnixFileMode.UserRead | UnixFileMode.UserWrite);
+#pragma warning restore CA1416
+            }
+            catch (Exception ex)
+            {
+                LogService.Debug($"Could not set restrictive permissions on {filePath}: {ex.Message}");
+            }
+        }
     }
 
     /// <summary>

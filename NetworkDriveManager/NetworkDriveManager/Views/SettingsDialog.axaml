@@ -1,0 +1,176 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="NetworkDriveManager.Views.SettingsDialog"
+        Title="{Binding SettingsTitle}" Height="700" Width="700"
+        WindowStartupLocation="CenterOwner"
+        Background="#f5f7fa">
+
+    <DockPanel LastChildFill="True" Margin="10">
+
+        <!-- SAVE / CANCEL (bottom) -->
+        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right"
+                    Margin="0,10,0,0">
+            <Button Content="{Binding CancelText}" Click="OnCancel" Margin="0,0,5,0"
+                    Background="Transparent" Foreground="#374151"
+                    BorderBrush="#d1d5db" BorderThickness="1" Padding="14,6" FontSize="12"/>
+            <Button Content="{Binding SaveText}" Click="OnSave"
+                    Background="#c62828" Foreground="White"
+                    BorderThickness="0" Padding="14,6" FontSize="12"/>
+        </StackPanel>
+
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+
+                <!-- DRIVE LIST (DataGrid) -->
+                <DataGrid x:Name="DriveGrid" AutoGenerateColumns="False"
+                          ItemsSource="{Binding Drives}" SelectedItem="{Binding SelectedDrive}"
+                          SelectionMode="Single" CanUserResizeColumns="True"
+                          IsReadOnly="True" HeadersVisibility="Column"
+                          Height="220" Margin="0,0,0,5"
+                          FontSize="10"
+                          GridLinesVisibility="Horizontal"
+                          HorizontalGridLinesBrush="#d1d5db">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="{Binding DataContext.LetterHeader,
+                            RelativeSource={RelativeSource AncestorType=Window}}"
+                            Binding="{Binding Letter}" Width="60"/>
+                        <DataGridTextColumn Header="{Binding DataContext.ServerHeader,
+                            RelativeSource={RelativeSource AncestorType=Window}}"
+                            Binding="{Binding Server}" Width="160"/>
+                        <DataGridTextColumn Header="{Binding DataContext.ShareHeader,
+                            RelativeSource={RelativeSource AncestorType=Window}}"
+                            Binding="{Binding Share}" Width="140"/>
+                        <DataGridTextColumn Header="{Binding DataContext.LabelHeader,
+                            RelativeSource={RelativeSource AncestorType=Window}}"
+                            Binding="{Binding Label}" Width="160"/>
+                        <DataGridTextColumn Header="{Binding DataContext.HiddenHeader,
+                            RelativeSource={RelativeSource AncestorType=Window}}"
+                            Binding="{Binding HiddenDisplay}" Width="55"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+
+                <!-- ACTION BUTTONS -->
+                <WrapPanel Margin="0,0,0,5">
+                    <Button Content="{Binding NewText}" Click="OnNew" MinWidth="70" Margin="0,0,5,0"
+                            Background="Transparent" Foreground="#c62828"
+                            BorderBrush="#c62828" BorderThickness="1" Padding="14,6" FontSize="12"/>
+                    <Button Content="{Binding AddText}" Click="OnAdd" MinWidth="80" Margin="0,0,5,0"
+                            Background="Transparent" Foreground="#c62828"
+                            BorderBrush="#c62828" BorderThickness="1" Padding="14,6" FontSize="12"/>
+                    <Button Content="{Binding EditText}" Click="OnEdit" MinWidth="90" Margin="0,0,5,0"
+                            Background="Transparent" Foreground="#c62828"
+                            BorderBrush="#c62828" BorderThickness="1" Padding="14,6" FontSize="12"/>
+                    <Button Content="{Binding RemoveText}" Click="OnRemove" MinWidth="90" Margin="0,0,5,0"
+                            Background="Transparent" Foreground="#b71c1c"
+                            BorderBrush="#b71c1c" BorderThickness="1" Padding="14,6" FontSize="12"/>
+                    <Button Content="{Binding ImportText}" Click="OnImport" MinWidth="90"
+                            Background="Transparent" Foreground="#c62828"
+                            BorderBrush="#c62828" BorderThickness="1" Padding="14,6" FontSize="12"/>
+                </WrapPanel>
+
+                <!-- ENTRY FORM -->
+                <TextBlock Text="{Binding FormTitle}" Foreground="#c62828"
+                           FontSize="11" FontWeight="Bold" Margin="5,5,0,3"/>
+                <Border Background="White" BorderBrush="#d1d5db" BorderThickness="1"
+                        CornerRadius="6" Padding="10" Margin="0,0,0,5">
+                    <Grid ColumnDefinitions="Auto,*,Auto,Auto,*,Auto"
+                          RowDefinitions="Auto,Auto,Auto,Auto,Auto">
+
+                        <!-- Letter -->
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding LetterHeader, StringFormat='{}{0}:'}"
+                                   VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <TextBox Grid.Row="0" Grid.Column="1"
+                                 Text="{Binding FormLetter}"
+                                 MaxLength="1" Padding="4,3"/>
+                        <TextBlock Grid.Row="0" Grid.Column="2" Text="●" FontSize="10"
+                                   Foreground="{Binding LetterIndicatorColor}"
+                                   VerticalAlignment="Center" Margin="4,0,8,0"/>
+
+                        <!-- Server -->
+                        <TextBlock Grid.Row="0" Grid.Column="3" Text="{Binding ServerHeader, StringFormat='{}{0}:'}"
+                                   VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <TextBox Grid.Row="0" Grid.Column="4"
+                                 Text="{Binding FormServer}"
+                                 Padding="4,3"/>
+                        <TextBlock Grid.Row="0" Grid.Column="5" Text="●" FontSize="10"
+                                   Foreground="{Binding ServerIndicatorColor}"
+                                   VerticalAlignment="Center" Margin="4,0,0,0"/>
+
+                        <!-- Hints row 1 -->
+                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding LetterHint}"
+                                   Foreground="{Binding LetterHintColor}"
+                                   FontSize="8" Margin="0,1,0,4"/>
+                        <TextBlock Grid.Row="1" Grid.Column="4" Text="{Binding ServerHint}"
+                                   Foreground="{Binding ServerHintColor}"
+                                   FontSize="8" Margin="0,1,0,4"/>
+
+                        <!-- Share -->
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="{Binding ShareHeader, StringFormat='{}{0}:'}"
+                                   VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <TextBox Grid.Row="2" Grid.Column="1"
+                                 Text="{Binding FormShare}"
+                                 Padding="4,3"/>
+                        <TextBlock Grid.Row="2" Grid.Column="2" Text="●" FontSize="10"
+                                   Foreground="{Binding ShareIndicatorColor}"
+                                   VerticalAlignment="Center" Margin="4,0,8,0"/>
+
+                        <!-- Label -->
+                        <TextBlock Grid.Row="2" Grid.Column="3" Text="{Binding LabelHeader, StringFormat='{}{0}:'}"
+                                   VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <TextBox Grid.Row="2" Grid.Column="4"
+                                 Text="{Binding FormLabel}"
+                                 Padding="4,3"/>
+                        <TextBlock Grid.Row="2" Grid.Column="5" Text="●" FontSize="10"
+                                   Foreground="{Binding LabelIndicatorColor}"
+                                   VerticalAlignment="Center" Margin="4,0,0,0"/>
+
+                        <!-- Hints row 3 -->
+                        <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding ShareHint}"
+                                   Foreground="{Binding ShareHintColor}"
+                                   FontSize="8" Margin="0,1,0,4"/>
+                        <TextBlock Grid.Row="3" Grid.Column="4" Text="{Binding LabelHint}"
+                                   Foreground="{Binding LabelHintColor}"
+                                   FontSize="8" Margin="0,1,0,4"/>
+
+                        <!-- Hidden checkbox -->
+                        <CheckBox Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="3"
+                                  Content="{Binding HiddenHeader}"
+                                  IsChecked="{Binding FormHidden}" Margin="0,5,0,0"/>
+                    </Grid>
+                </Border>
+
+                <!-- CONNECTION LOG -->
+                <DockPanel Margin="0,5,0,3">
+                    <TextBlock Text="{Binding LogTitle}" Foreground="#c62828"
+                               FontSize="11" FontWeight="Bold"
+                               VerticalAlignment="Center" DockPanel.Dock="Left" Margin="5,0"/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" DockPanel.Dock="Right">
+                        <Button Content="{Binding LogRefreshText}" Click="OnLogRefresh" MinWidth="90" Margin="0,0,5,0"
+                                Background="Transparent" Foreground="#c62828"
+                                BorderBrush="#c62828" BorderThickness="1" Padding="14,6" FontSize="12"/>
+                        <Button Content="{Binding LogExportCsvText}" Click="OnLogExportCsv" MinWidth="90" Margin="0,0,5,0"
+                                Background="Transparent" Foreground="#c62828"
+                                BorderBrush="#c62828" BorderThickness="1" Padding="14,6" FontSize="12"/>
+                        <Button Content="{Binding LogClearText}" Click="OnLogClear" MinWidth="90"
+                                Background="Transparent" Foreground="#b71c1c"
+                                BorderBrush="#b71c1c" BorderThickness="1" Padding="14,6" FontSize="12"/>
+                    </StackPanel>
+                </DockPanel>
+
+                <Border Background="White" BorderBrush="#d1d5db" BorderThickness="1"
+                        CornerRadius="6" Padding="4" Margin="0,0,0,3">
+                    <TextBox x:Name="LogTextBox" IsReadOnly="True" TextWrapping="NoWrap"
+                             AcceptsReturn="True"
+                             FontFamily="Consolas" FontSize="9"
+                             Background="White" Foreground="#1a1a2e"
+                             BorderThickness="0" Height="140"/>
+                </Border>
+
+                <TextBlock Text="{Binding LogFileLabel}" Foreground="#6b7280"
+                           FontSize="8" Margin="5,2,0,0"/>
+
+            </StackPanel>
+        </ScrollViewer>
+
+    </DockPanel>
+</Window>

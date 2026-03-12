@@ -1,0 +1,92 @@
+name: Build & Release
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            rid: win-x64
+            artifact: NetworkDriveManager-windows-x64
+          - os: macos-latest
+            rid: osx-x64
+            artifact: NetworkDriveManager-macos-x64
+          - os: macos-latest
+            rid: osx-arm64
+            artifact: NetworkDriveManager-macos-arm64
+          - os: ubuntu-latest
+            rid: linux-x64
+            artifact: NetworkDriveManager-linux-x64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore NetworkDriveManager/NetworkDriveManager/NetworkDriveManager.csproj
+
+      - name: Build
+        run: dotnet build NetworkDriveManager/NetworkDriveManager/NetworkDriveManager.csproj --configuration Release --no-restore
+
+      - name: Publish self-contained
+        run: >
+          dotnet publish NetworkDriveManager/NetworkDriveManager/NetworkDriveManager.csproj
+          --configuration Release
+          --runtime ${{ matrix.rid }}
+          --self-contained true
+          --output ./publish/${{ matrix.artifact }}
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+
+      - name: Archive (Windows)
+        if: runner.os == 'Windows'
+        run: Compress-Archive -Path ./publish/${{ matrix.artifact }}/* -DestinationPath ./${{ matrix.artifact }}.zip
+
+      - name: Archive (Linux/macOS)
+        if: runner.os != 'Windows'
+        run: cd ./publish && tar -czf ../${{ matrix.artifact }}.tar.gz ${{ matrix.artifact }}
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: |
+            ${{ matrix.artifact }}.zip
+            ${{ matrix.artifact }}.tar.gz
+          if-no-files-found: ignore
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4.1.7
+        with:
+          path: artifacts
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            artifacts/**/*.zip
+            artifacts/**/*.tar.gz

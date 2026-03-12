@@ -1,8 +1,9 @@
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Text.RegularExpressions;
-using System.Windows;
-using Microsoft.Win32;
+using Avalonia.Controls;
+using Avalonia.Interactivity;
+using Avalonia.Platform.Storage;
 using NetworkDriveManager.Helpers;
 using NetworkDriveManager.Models;
 using NetworkDriveManager.Services;
@@ -98,9 +99,7 @@ public class SettingsViewModel : ObservableObject
         set => SetProperty(ref _formTitle, value);
     }
 
-    /// <summary>Backing field for <see cref="FormLetter"/>.</summary>
     private string _formLetter = string.Empty;
-    /// <summary>Gets or sets the drive letter form field value.</summary>
     public string FormLetter
     {
         get => _formLetter;
@@ -115,9 +114,7 @@ public class SettingsViewModel : ObservableObject
         }
     }
 
-    /// <summary>Backing field for <see cref="FormServer"/>.</summary>
     private string _formServer = string.Empty;
-    /// <summary>Gets or sets the server address form field value.</summary>
     public string FormServer
     {
         get => _formServer;
@@ -132,9 +129,7 @@ public class SettingsViewModel : ObservableObject
         }
     }
 
-    /// <summary>Backing field for <see cref="FormShare"/>.</summary>
     private string _formShare = string.Empty;
-    /// <summary>Gets or sets the share name form field value.</summary>
     public string FormShare
     {
         get => _formShare;
@@ -149,9 +144,7 @@ public class SettingsViewModel : ObservableObject
         }
     }
 
-    /// <summary>Backing field for <see cref="FormLabel"/>.</summary>
     private string _formLabel = string.Empty;
-    /// <summary>Gets or sets the label form field value.</summary>
     public string FormLabel
     {
         get => _formLabel;
@@ -166,16 +159,13 @@ public class SettingsViewModel : ObservableObject
         }
     }
 
-    /// <summary>Backing field for <see cref="FormHidden"/>.</summary>
     private bool _formHidden;
-    /// <summary>Gets or sets the hidden checkbox form field value.</summary>
     public bool FormHidden
     {
         get => _formHidden;
         set => SetProperty(ref _formHidden, value);
     }
 
-    /// <summary>Gets the validation hint text for the drive letter field.</summary>
     public string LetterHint
     {
         get
@@ -185,45 +175,31 @@ public class SettingsViewModel : ObservableObject
                 ? T("letter_hint_valid") : T("letter_hint_invalid");
         }
     }
-    /// <summary>Gets the color for the drive letter validation hint text.</summary>
     public string LetterHintColor => string.IsNullOrWhiteSpace(FormLetter) ? "#6b7280"
         : (FormLetter.Trim().Length == 1 && char.IsLetter(FormLetter.Trim()[0]) ? "#2e7d32" : "#b71c1c");
-    /// <summary>Gets the color for the drive letter validation indicator.</summary>
     public string LetterIndicatorColor => LetterHintColor;
 
-    /// <summary>Gets the validation hint text for the server field.</summary>
     public string ServerHint => string.IsNullOrWhiteSpace(FormServer) ? T("server_hint") : T("server_hint_valid");
-    /// <summary>Gets the color for the server validation hint text.</summary>
     public string ServerHintColor => string.IsNullOrWhiteSpace(FormServer) ? "#6b7280" : "#2e7d32";
-    /// <summary>Gets the color for the server validation indicator.</summary>
     public string ServerIndicatorColor => ServerHintColor;
 
-    /// <summary>Gets the validation hint text for the share field.</summary>
     public string ShareHint => string.IsNullOrWhiteSpace(FormShare) ? T("share_hint") : T("share_hint_valid");
-    /// <summary>Gets the color for the share validation hint text.</summary>
     public string ShareHintColor => string.IsNullOrWhiteSpace(FormShare) ? "#6b7280" : "#2e7d32";
-    /// <summary>Gets the color for the share validation indicator.</summary>
     public string ShareIndicatorColor => ShareHintColor;
 
-    /// <summary>Gets the validation hint text for the label field.</summary>
     public string LabelHint => string.IsNullOrWhiteSpace(FormLabel) ? T("label_hint") : T("label_hint_valid");
-    /// <summary>Gets the color for the label validation hint text.</summary>
     public string LabelHintColor => string.IsNullOrWhiteSpace(FormLabel) ? "#6b7280" : "#2e7d32";
-    /// <summary>Gets the color for the label validation indicator.</summary>
     public string LabelIndicatorColor => LabelHintColor;
 
-    /// <summary>Gets the observable collection of drive configuration rows.</summary>
-    public ObservableCollection<SettingsDriveRow> Drives { get; } = new();
+    public ObservableCollection<SettingsDriveRow> Drives { get; } = [];
 
-    /// <summary>Backing field for <see cref="SelectedDrive"/>.</summary>
     private SettingsDriveRow? _selectedDrive;
-    /// <summary>Gets or sets the currently selected drive in the data grid.</summary>
     public SettingsDriveRow? SelectedDrive
     {
         get => _selectedDrive;
         set
         {
-            if (SetProperty(ref _selectedDrive, value) && value != null)
+            if (SetProperty(ref _selectedDrive, value) && value is not null)
             {
                 FormLetter = value.Letter;
                 FormServer = value.Server;
@@ -236,10 +212,8 @@ public class SettingsViewModel : ObservableObject
         }
     }
 
-    /// <summary>Gets or sets the index of the drive being edited, or -1 if adding a new drive.</summary>
     public int EditingIndex { get; set; } = -1;
 
-    /// <summary>Resets all form fields and editing state to defaults.</summary>
     public void ClearForm()
     {
         FormLetter = string.Empty;
@@ -252,10 +226,8 @@ public class SettingsViewModel : ObservableObject
         SelectedDrive = null;
     }
 
-    /// <summary>Converts the drive rows to a list of <see cref="DriveConfig"/> for saving.</summary>
-    public List<DriveConfig> ToDriveConfigs()
-    {
-        return Drives.Select(d => new DriveConfig
+    public List<DriveConfig> ToDriveConfigs() =>
+        Drives.Select(d => new DriveConfig
         {
             Letter = d.Letter,
             Server = d.Server,
@@ -263,7 +235,6 @@ public class SettingsViewModel : ObservableObject
             Label = d.Label,
             Hidden = d.Hidden,
         }).ToList();
-    }
 }
 
 /// <summary>
@@ -271,12 +242,9 @@ public class SettingsViewModel : ObservableObject
 /// </summary>
 public partial class SettingsDialog : Window
 {
-    /// <summary>Reference to the main window ViewModel.</summary>
     private readonly MainViewModel _mainVm;
-    /// <summary>Settings dialog ViewModel instance.</summary>
     private readonly SettingsViewModel _vm;
 
-    /// <summary>Initializes the settings dialog and loads the current drive configuration.</summary>
     public SettingsDialog(MainViewModel mainVm)
     {
         InitializeComponent();
@@ -289,17 +257,15 @@ public partial class SettingsDialog : Window
         RefreshLog();
     }
 
-    /// <summary>Clears the form for a new drive entry.</summary>
+    /// <summary>Required by Avalonia XAML loader.</summary>
+    public SettingsDialog() : this(new MainViewModel()) { }
+
     private void OnNew(object sender, RoutedEventArgs e)
     {
         _vm.ClearForm();
         DriveGrid.SelectedItem = null;
     }
 
-    /// <summary>
-    /// Validate form fields and check for duplicate drive letters.
-    /// Returns the validated (letter, server, share, label) or null if validation fails.
-    /// </summary>
     private (string Letter, string Server, string Share, string Label)? ValidateForm(int excludeIndex = -1)
     {
         var letter = _vm.FormLetter.Trim().ToUpper();
@@ -311,24 +277,22 @@ public partial class SettingsDialog : Window
         if (string.IsNullOrEmpty(letter) || string.IsNullOrEmpty(server) ||
             string.IsNullOrEmpty(share) || string.IsNullOrEmpty(label))
         {
-            MessageBox.Show(this, Translations.Get(lang, "drive_fields_required"),
-                Translations.Get(lang, "error"), MessageBoxButton.OK, MessageBoxImage.Warning);
+            ShowMessage(Translations.Get(lang, "error"), Translations.Get(lang, "drive_fields_required"));
             return null;
         }
 
         if (letter.Length != 1 || !char.IsLetter(letter[0]))
         {
-            MessageBox.Show(this, Translations.Get(lang, "drive_letter_invalid"),
-                Translations.Get(lang, "error"), MessageBoxButton.OK, MessageBoxImage.Warning);
+            ShowMessage(Translations.Get(lang, "error"), Translations.Get(lang, "drive_letter_invalid"));
             return null;
         }
 
-        for (int i = 0; i < _vm.Drives.Count; i++)
+        for (var i = 0; i < _vm.Drives.Count; i++)
         {
             if (i != excludeIndex && _vm.Drives[i].Letter.Equals(letter, StringComparison.OrdinalIgnoreCase))
             {
-                MessageBox.Show(this, string.Format(Translations.Get(lang, "drive_letter_duplicate"), letter),
-                    Translations.Get(lang, "error"), MessageBoxButton.OK, MessageBoxImage.Warning);
+                ShowMessage(Translations.Get(lang, "error"),
+                    string.Format(Translations.Get(lang, "drive_letter_duplicate"), letter));
                 return null;
             }
         }
@@ -336,7 +300,6 @@ public partial class SettingsDialog : Window
         return (letter, server, share, label);
     }
 
-    /// <summary>Validates the form and adds a new drive to the list.</summary>
     private void OnAdd(object sender, RoutedEventArgs e)
     {
         var validated = ValidateForm();
@@ -350,7 +313,6 @@ public partial class SettingsDialog : Window
         _vm.ClearForm();
     }
 
-    /// <summary>Validates the form and updates the currently selected drive.</summary>
     private void OnEdit(object sender, RoutedEventArgs e)
     {
         if (_vm.EditingIndex < 0 || _vm.EditingIndex >= _vm.Drives.Count) return;
@@ -366,56 +328,61 @@ public partial class SettingsDialog : Window
         _vm.ClearForm();
     }
 
-    /// <summary>Removes the selected drive from the list after user confirmation.</summary>
-    private void OnRemove(object sender, RoutedEventArgs e)
+    private async void OnRemove(object sender, RoutedEventArgs e)
     {
-        if (_vm.SelectedDrive == null) return;
+        if (_vm.SelectedDrive is null) return;
         var lang = _mainVm.Lang;
-        var result = MessageBox.Show(this,
-            string.Format(Translations.Get(lang, "confirm_remove_msg"),
-                _vm.SelectedDrive.Letter, _vm.SelectedDrive.Label),
-            Translations.Get(lang, "confirm_remove_title"),
-            MessageBoxButton.YesNo, MessageBoxImage.Question);
+        var msg = string.Format(Translations.Get(lang, "confirm_remove_msg"),
+            _vm.SelectedDrive.Letter, _vm.SelectedDrive.Label);
 
-        if (result == MessageBoxResult.Yes)
+        var confirmed = await ShowConfirmation(Translations.Get(lang, "confirm_remove_title"), msg);
+        if (confirmed)
         {
             _vm.Drives.Remove(_vm.SelectedDrive);
             _vm.ClearForm();
         }
     }
 
-    /// <summary>Imports drive configurations from a batch (.bat/.cmd) file.</summary>
-    private void OnImport(object sender, RoutedEventArgs e)
+    private async void OnImport(object sender, RoutedEventArgs e)
     {
         var lang = _mainVm.Lang;
-        var dlg = new OpenFileDialog
+        var topLevel = TopLevel.GetTopLevel(this);
+        if (topLevel is null) return;
+
+        var files = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
             Title = Translations.Get(lang, "import_select_file"),
-            Filter = "Batch files (*.bat;*.cmd)|*.bat;*.cmd|All files (*.*)|*.*",
-        };
+            FileTypeFilter =
+            [
+                new FilePickerFileType("Batch files") { Patterns = ["*.bat", "*.cmd"] },
+                new FilePickerFileType("All files") { Patterns = ["*"] },
+            ],
+            AllowMultiple = false,
+        });
 
-        if (dlg.ShowDialog(this) != true) return;
+        if (files.Count == 0) return;
 
         try
         {
-            var content = File.ReadAllText(dlg.FileName);
+            await using var stream = await files[0].OpenReadAsync();
+            using var reader = new StreamReader(stream);
+            var content = await reader.ReadToEndAsync();
+
             var (imported, skipped) = DriveService.ParseBatDrives(content);
 
             if (imported.Count == 0)
             {
-                MessageBox.Show(this, Translations.Get(lang, "import_drives_no_drives"),
-                    Translations.Get(lang, "import_drives_title"),
-                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                ShowMessage(Translations.Get(lang, "import_drives_title"),
+                    Translations.Get(lang, "import_drives_no_drives"));
                 return;
             }
 
-            var msg = string.Format(Translations.Get(lang, "import_drives_confirm"), imported.Count);
+            var confirmMsg = string.Format(Translations.Get(lang, "import_drives_confirm"), imported.Count);
             if (skipped > 0)
-                msg += "\n\n" + string.Format(Translations.Get(lang, "import_drives_skipped"), skipped);
+                confirmMsg += "\n\n" + string.Format(Translations.Get(lang, "import_drives_skipped"), skipped);
 
-            if (MessageBox.Show(this, msg, Translations.Get(lang, "import_drives_title"),
-                MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
-                return;
+            var confirmed = await ShowConfirmation(Translations.Get(lang, "import_drives_title"), confirmMsg);
+            if (!confirmed) return;
 
             _vm.Drives.Clear();
             foreach (var d in imported)
@@ -430,47 +397,35 @@ public partial class SettingsDialog : Window
             if (skipped > 0)
                 successMsg += "\n" + string.Format(Translations.Get(lang, "import_drives_skipped"), skipped);
 
-            MessageBox.Show(this, successMsg, Translations.Get(lang, "import_drives_title"),
-                MessageBoxButton.OK, MessageBoxImage.Information);
+            ShowMessage(Translations.Get(lang, "import_drives_title"), successMsg);
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, string.Format(Translations.Get(lang, "import_drives_error"), ex.Message),
-                Translations.Get(lang, "error"), MessageBoxButton.OK, MessageBoxImage.Error);
+            ShowMessage(Translations.Get(lang, "error"),
+                string.Format(Translations.Get(lang, "import_drives_error"), ex.Message));
         }
     }
 
-    /// <summary>Saves the drive configuration and closes the dialog.</summary>
     private void OnSave(object sender, RoutedEventArgs e)
     {
         var lang = _mainVm.Lang;
         try
         {
             ConfigService.SaveConfig(_vm.ToDriveConfigs());
-            MessageBox.Show(this, Translations.Get(lang, "settings_saved_msg"),
-                Translations.Get(lang, "settings_saved"),
-                MessageBoxButton.OK, MessageBoxImage.Information);
-            DialogResult = true;
+            ShowMessage(Translations.Get(lang, "settings_saved"), Translations.Get(lang, "settings_saved_msg"));
             Close();
             _mainVm.ReloadDrives();
         }
         catch (Exception ex)
         {
             LogService.Error($"Failed to save drive configuration: {ex.Message}");
-            MessageBox.Show(this,
-                string.Format(Translations.Get(lang, "settings_save_failed"), ex.Message),
-                Translations.Get(lang, "error"), MessageBoxButton.OK, MessageBoxImage.Error);
+            ShowMessage(Translations.Get(lang, "error"),
+                string.Format(Translations.Get(lang, "settings_save_failed"), ex.Message));
         }
     }
 
-    /// <summary>Closes the dialog without saving changes.</summary>
-    private void OnCancel(object sender, RoutedEventArgs e)
-    {
-        DialogResult = false;
-        Close();
-    }
+    private void OnCancel(object sender, RoutedEventArgs e) => Close();
 
-    /// <summary>Reloads error and warning log entries into the log text box.</summary>
     private void RefreshLog()
     {
         var entries = LogService.ReadErrorWarningEntries();
@@ -478,66 +433,145 @@ public partial class SettingsDialog : Window
         LogTextBox.Text = entries.Count == 0
             ? Translations.Get(lang, "log_empty")
             : string.Join(Environment.NewLine, entries);
-        LogTextBox.ScrollToEnd();
     }
 
-    /// <summary>Handles the log refresh button click event.</summary>
     private void OnLogRefresh(object sender, RoutedEventArgs e) => RefreshLog();
 
-    /// <summary>Clears all log files after user confirmation.</summary>
-    private void OnLogClear(object sender, RoutedEventArgs e)
+    private async void OnLogClear(object sender, RoutedEventArgs e)
     {
         var lang = _mainVm.Lang;
-        if (MessageBox.Show(this, Translations.Get(lang, "log_clear_confirm_msg"),
+        var confirmed = await ShowConfirmation(
             Translations.Get(lang, "log_clear_confirm_title"),
-            MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+            Translations.Get(lang, "log_clear_confirm_msg"));
+
+        if (confirmed)
         {
             LogService.ClearLog();
             RefreshLog();
         }
     }
 
-    /// <summary>Exports log entries to a CSV file chosen by the user.</summary>
-    private void OnLogExportCsv(object sender, RoutedEventArgs e)
+    private async void OnLogExportCsv(object sender, RoutedEventArgs e)
     {
         var lang = _mainVm.Lang;
-        var dlg = new SaveFileDialog
+        var topLevel = TopLevel.GetTopLevel(this);
+        if (topLevel is null) return;
+
+        var file = await topLevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
             Title = Translations.Get(lang, "log_export_csv_title"),
-            Filter = "CSV files (*.csv)|*.csv|All files (*.*)|*.*",
-            DefaultExt = ".csv",
-        };
+            DefaultExtension = "csv",
+            FileTypeChoices =
+            [
+                new FilePickerFileType("CSV files") { Patterns = ["*.csv"] },
+                new FilePickerFileType("All files") { Patterns = ["*"] },
+            ],
+        });
 
-        if (dlg.ShowDialog(this) != true) return;
+        if (file is null) return;
 
         try
         {
             var entries = LogService.ReadErrorWarningEntries();
             var logPattern = new Regex(@"^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\s+\[(\w+)\]\s+(.*)");
 
-            using var writer = new StreamWriter(dlg.FileName, false, new System.Text.UTF8Encoding(true));
-            writer.WriteLine("Timestamp,Level,Message");
+            await using var stream = await file.OpenWriteAsync();
+            await using var writer = new StreamWriter(stream, new System.Text.UTF8Encoding(true));
+            await writer.WriteLineAsync("Timestamp,Level,Message");
+
             foreach (var line in entries)
             {
                 var match = logPattern.Match(line);
                 if (match.Success)
-                    writer.WriteLine($"\"{match.Groups[1].Value}\",\"{match.Groups[2].Value}\",\"{match.Groups[3].Value.Replace("\"", "\"\"")}\"");
+                    await writer.WriteLineAsync(
+                        $"\"{match.Groups[1].Value}\",\"{match.Groups[2].Value}\",\"{match.Groups[3].Value.Replace("\"", "\"\"")}\"");
                 else
-                    writer.WriteLine($"\"\",,\"{line.Replace("\"", "\"\"")}\"");
+                    await writer.WriteLineAsync($"\"\",,\"{line.Replace("\"", "\"\"")}\"");
             }
 
-            LogService.Info($"Log exported to CSV: {dlg.FileName}");
-            MessageBox.Show(this,
-                string.Format(Translations.Get(lang, "log_export_csv_success"), dlg.FileName),
-                Translations.Get(lang, "log_export_csv_title"),
-                MessageBoxButton.OK, MessageBoxImage.Information);
+            LogService.Info($"Log exported to CSV: {file.Name}");
+            ShowMessage(Translations.Get(lang, "log_export_csv_title"),
+                string.Format(Translations.Get(lang, "log_export_csv_success"), file.Name));
         }
         catch (Exception ex)
         {
             LogService.Error($"Failed to export log to CSV: {ex.Message}");
-            MessageBox.Show(this,
-                string.Format(Translations.Get(lang, "log_export_csv_error"), ex.Message),
-                Translations.Get(lang, "error"), MessageBoxButton.OK, MessageBoxImage.Error);
+            ShowMessage(Translations.Get(lang, "error"),
+                string.Format(Translations.Get(lang, "log_export_csv_error"), ex.Message));
         }
+    }
+
+    /// <summary>Shows a simple message dialog.</summary>
+    private async void ShowMessage(string title, string message)
+    {
+        var dialog = new Window
+        {
+            Title = title,
+            Width = 420,
+            Height = 200,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            CanResize = false,
+        };
+
+        var panel = new StackPanel
+        {
+            Margin = new Avalonia.Thickness(20),
+            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
+        };
+        panel.Children.Add(new TextBlock
+        {
+            Text = message,
+            TextWrapping = Avalonia.Media.TextWrapping.Wrap,
+            Margin = new Avalonia.Thickness(0, 0, 0, 20),
+        });
+        var okBtn = new Button
+        {
+            Content = "OK",
+            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right,
+            Padding = new Avalonia.Thickness(20, 6),
+        };
+        okBtn.Click += (_, _) => dialog.Close();
+        panel.Children.Add(okBtn);
+        dialog.Content = panel;
+        await dialog.ShowDialog(this);
+    }
+
+    /// <summary>Shows a Yes/No confirmation dialog and returns the user's choice.</summary>
+    private async Task<bool> ShowConfirmation(string title, string message)
+    {
+        var result = false;
+        var dialog = new Window
+        {
+            Title = title,
+            Width = 420,
+            Height = 200,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            CanResize = false,
+        };
+
+        var panel = new StackPanel
+        {
+            Margin = new Avalonia.Thickness(20),
+            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
+        };
+        panel.Children.Add(new TextBlock
+        {
+            Text = message,
+            TextWrapping = Avalonia.Media.TextWrapping.Wrap,
+            Margin = new Avalonia.Thickness(0, 0, 0, 20),
+        });
+
+        var btnPanel = new StackPanel { Orientation = Avalonia.Layout.Orientation.Horizontal, HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right };
+        var noBtn = new Button { Content = "No", Margin = new Avalonia.Thickness(0, 0, 8, 0), Padding = new Avalonia.Thickness(20, 6) };
+        var yesBtn = new Button { Content = "Yes", Padding = new Avalonia.Thickness(20, 6) };
+        noBtn.Click += (_, _) => { result = false; dialog.Close(); };
+        yesBtn.Click += (_, _) => { result = true; dialog.Close(); };
+        btnPanel.Children.Add(noBtn);
+        btnPanel.Children.Add(yesBtn);
+        panel.Children.Add(btnPanel);
+
+        dialog.Content = panel;
+        await dialog.ShowDialog(this);
+        return result;
     }
 }
