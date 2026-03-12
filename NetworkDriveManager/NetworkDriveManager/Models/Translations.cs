@@ -5,6 +5,9 @@ namespace NetworkDriveManager.Models;
 /// </summary>
 public static class Translations
 {
+    /// <summary>
+    /// Two-level dictionary mapping language code → key → translated string.
+    /// </summary>
     private static readonly Dictionary<string, Dictionary<string, string>> _translations = new()
     {
         ["en"] = new Dictionary<string, string>
@@ -235,6 +238,10 @@ public static class Translations
         },
     };
 
+    /// <summary>
+    /// Retrieve a translated string for the given language and key.
+    /// Falls back to the key itself if no translation is found.
+    /// </summary>
     public static string Get(string lang, string key)
     {
         if (_translations.TryGetValue(lang, out var dict) && dict.TryGetValue(key, out var val))
