@@ -13,12 +13,16 @@ namespace NetworkDriveManager.ViewModels;
 /// </summary>
 public class DriveRowViewModel : ObservableObject
 {
+    /// <summary>The underlying drive configuration.</summary>
     public DriveConfig Config { get; }
 
+    /// <summary>Drive letter from the configuration.</summary>
     public string Letter => Config.Letter;
+    /// <summary>Formatted display string showing the label and UNC path.</summary>
     public string DisplayPath => $"{Config.Label}  ({Config.UncPath})";
 
     private bool _isConnected;
+    /// <summary>Whether the drive is currently connected.</summary>
     public bool IsConnected
     {
         get => _isConnected;
@@ -34,8 +38,8 @@ public class DriveRowViewModel : ObservableObject
         }
     }
 
-    // null = not checked, true = reachable, false = unreachable
     private bool? _serverReachable;
+    /// <summary>Server reachability state: null = not checked, true = reachable, false = unreachable.</summary>
     public bool? ServerReachable
     {
         get => _serverReachable;
@@ -50,6 +54,7 @@ public class DriveRowViewModel : ObservableObject
     }
 
     private bool _isCheckingServer;
+    /// <summary>Whether a server reachability check is in progress.</summary>
     public bool IsCheckingServer
     {
         get => _isCheckingServer;
@@ -57,6 +62,7 @@ public class DriveRowViewModel : ObservableObject
     }
 
     private string _lang = "de";
+    /// <summary>Current UI language code (de or en).</summary>
     public string Lang
     {
         get => _lang;
@@ -71,18 +77,23 @@ public class DriveRowViewModel : ObservableObject
         }
     }
 
+    /// <summary>Localized connection status text.</summary>
     public string StatusText => IsConnected
         ? Translations.Get(Lang, "connected")
         : Translations.Get(Lang, "disconnected");
 
+    /// <summary>Color code for the connection status indicator.</summary>
     public string StatusColor => IsConnected ? "#2e7d32" : "#b71c1c";
 
+    /// <summary>Localized connect/disconnect button text.</summary>
     public string ToggleButtonText => IsConnected
         ? Translations.Get(Lang, "disconnect")
         : Translations.Get(Lang, "connect");
 
+    /// <summary>Color code for the toggle button.</summary>
     public string ToggleButtonColor => IsConnected ? "#2e7d32" : "#b71c1c";
 
+    /// <summary>Localized server check status text.</summary>
     public string ServerCheckText
     {
         get
@@ -97,6 +108,7 @@ public class DriveRowViewModel : ObservableObject
         }
     }
 
+    /// <summary>Color code for the server check status indicator.</summary>
     public string ServerCheckColor
     {
         get
@@ -111,6 +123,7 @@ public class DriveRowViewModel : ObservableObject
         }
     }
 
+    /// <summary>Initializes a new drive row view model from the given configuration.</summary>
     public DriveRowViewModel(DriveConfig config) => Config = config;
 }
 
@@ -119,9 +132,11 @@ public class DriveRowViewModel : ObservableObject
 /// </summary>
 public class WarningItem : ObservableObject
 {
+    /// <summary>Unique identifier for the warning.</summary>
     public string Key { get; set; } = string.Empty;
 
     private string _message = string.Empty;
+    /// <summary>Warning message text displayed to the user.</summary>
     public string Message
     {
         get => _message;
@@ -134,15 +149,18 @@ public class WarningItem : ObservableObject
 /// </summary>
 public class MainViewModel : ObservableObject
 {
+    /// <summary>WPF dispatcher for UI thread marshalling.</summary>
     private readonly Dispatcher _dispatcher;
+    /// <summary>Timer for periodic drive monitoring.</summary>
     private System.Threading.Timer? _monitorTimer;
+    /// <summary>Flag indicating whether an async operation is in progress.</summary>
     private bool _busy;
 
     /// <summary>How often (seconds) the background monitor checks connected drives.</summary>
     private const int MonitorIntervalSeconds = 30;
 
-    // ── Language ──────────────────────────────────────────────────────
     private string _lang = "de";
+    /// <summary>Current UI language code (de or en).</summary>
     public string Lang
     {
         get => _lang;
@@ -179,9 +197,10 @@ public class MainViewModel : ObservableObject
         }
     }
 
+    /// <summary>Shorthand for translation lookup using the current language.</summary>
     public string T(string key) => Translations.Get(Lang, key);
 
-    // ── Translated properties ────────────────────────────────────────
+    /// <summary>Localized UI text properties bound to the view.</summary>
     public string WindowTitle => T("window_title");
     public string AppSubtitle => T("app_subtitle");
     public string CredentialsHeader => T("credentials");
@@ -202,8 +221,8 @@ public class MainViewModel : ObservableObject
     public string HelpText => T("help");
     public string WarningsHeader => T("warnings");
 
-    // ── Credentials ──────────────────────────────────────────────────
     private string _username = string.Empty;
+    /// <summary>Network credential username.</summary>
     public string Username
     {
         get => _username;
@@ -219,6 +238,7 @@ public class MainViewModel : ObservableObject
     }
 
     private string _password = string.Empty;
+    /// <summary>Network credential password.</summary>
     public string Password
     {
         get => _password;
@@ -233,6 +253,7 @@ public class MainViewModel : ObservableObject
         }
     }
 
+    /// <summary>Validation hint text for the username field.</summary>
     public string UsernameHintText
     {
         get
@@ -242,6 +263,7 @@ public class MainViewModel : ObservableObject
         }
     }
 
+    /// <summary>Color for the username hint text.</summary>
     public string UsernameHintColor
     {
         get
@@ -251,6 +273,7 @@ public class MainViewModel : ObservableObject
         }
     }
 
+    /// <summary>Color for the username validation indicator.</summary>
     public string UsernameIndicatorColor
     {
         get
@@ -260,6 +283,7 @@ public class MainViewModel : ObservableObject
         }
     }
 
+    /// <summary>Validation hint text for the password field.</summary>
     public string PasswordHintText
     {
         get
@@ -269,21 +293,24 @@ public class MainViewModel : ObservableObject
         }
     }
 
+    /// <summary>Color for the password hint text.</summary>
     public string PasswordHintColor =>
         string.IsNullOrEmpty(Password) ? "#6b7280" : "#2e7d32";
 
+    /// <summary>Color for the password validation indicator.</summary>
     public string PasswordIndicatorColor =>
         string.IsNullOrEmpty(Password) ? "#6b7280" : "#2e7d32";
 
-    // ── Drive rows ───────────────────────────────────────────────────
+    /// <summary>Observable collection of drive row view models.</summary>
     public ObservableCollection<DriveRowViewModel> DriveRows { get; } = new();
 
-    // ── Warnings ─────────────────────────────────────────────────────
+    /// <summary>Observable collection of warning items.</summary>
     public ObservableCollection<WarningItem> Warnings { get; } = new();
+    /// <summary>Whether any warnings exist.</summary>
     public bool HasWarnings => Warnings.Count > 0;
 
-    // ── Status bar ───────────────────────────────────────────────────
     private string _statusMessage = string.Empty;
+    /// <summary>Status bar message text.</summary>
     public string StatusMessage
     {
         get => _statusMessage;
@@ -291,13 +318,14 @@ public class MainViewModel : ObservableObject
     }
 
     private string _statusColor = "#1565c0";
+    /// <summary>Status bar color.</summary>
     public string StatusColor
     {
         get => _statusColor;
         set => SetProperty(ref _statusColor, value);
     }
 
-    // ── Busy state ───────────────────────────────────────────────────
+    /// <summary>Whether an async operation is currently running.</summary>
     public bool IsBusy
     {
         get => _busy;
@@ -308,26 +336,38 @@ public class MainViewModel : ObservableObject
         }
     }
 
+    /// <summary>Inverse of <see cref="IsBusy"/> for data binding.</summary>
     public bool IsNotBusy => !_busy;
 
-    // ── Commands ─────────────────────────────────────────────────────
+    /// <summary>Command to toggle UI language between German and English.</summary>
     public ICommand ToggleLanguageCommand { get; }
+    /// <summary>Command to save credentials to encrypted storage.</summary>
     public ICommand SaveCredentialsCommand { get; }
+    /// <summary>Command to connect all disconnected drives.</summary>
     public ICommand ConnectAllCommand { get; }
+    /// <summary>Command to disconnect all connected drives.</summary>
     public ICommand DisconnectAllCommand { get; }
+    /// <summary>Command to refresh the connection status of all drives.</summary>
     public ICommand RefreshStatusCommand { get; }
+    /// <summary>Command to toggle connection state of a single drive.</summary>
     public ICommand ToggleDriveCommand { get; }
+    /// <summary>Command to check server reachability for a drive.</summary>
     public ICommand CheckServerCommand { get; }
+    /// <summary>Command to dismiss a single warning by key.</summary>
     public ICommand DismissWarningCommand { get; }
-    // These are handled by the View (open dialog windows)
+    /// <summary>Command to open the settings dialog.</summary>
     public ICommand OpenSettingsCommand { get; }
+    /// <summary>Command to open the help dialog.</summary>
     public ICommand OpenHelpCommand { get; }
 
-    // Events for the View to handle
+    /// <summary>Raised when the user requests the settings dialog.</summary>
     public event Action? SettingsRequested;
+    /// <summary>Raised when the user requests the help dialog.</summary>
     public event Action? HelpRequested;
+    /// <summary>Raised when a message box should be shown (title, message, type).</summary>
     public event Action<string, string, string>? MessageBoxRequested; // title, msg, type
 
+    /// <summary>Initializes the view model, loads drives and credentials, and starts background monitoring.</summary>
     public MainViewModel()
     {
         _dispatcher = Dispatcher.CurrentDispatcher;
@@ -360,13 +400,13 @@ public class MainViewModel : ObservableObject
         LogService.Info("Application started");
     }
 
-    // ── Language ──────────────────────────────────────────────────────
+    /// <summary>Switches the UI language between German and English.</summary>
     private void ToggleLanguage()
     {
         Lang = Lang == "de" ? "en" : "de";
     }
 
-    // ── Credentials ──────────────────────────────────────────────────
+    /// <summary>Loads encrypted credentials from disk and pre-fills the fields.</summary>
     private void LoadSavedCredentials()
     {
         var (user, pass) = CredentialService.LoadCredentials();
@@ -378,6 +418,7 @@ public class MainViewModel : ObservableObject
         }
     }
 
+    /// <summary>Encrypts and saves the current credentials to disk.</summary>
     private void DoSaveCredentials()
     {
         if (string.IsNullOrWhiteSpace(Username) || string.IsNullOrEmpty(Password))
@@ -397,7 +438,7 @@ public class MainViewModel : ObservableObject
         }
     }
 
-    // ── Drive loading ────────────────────────────────────────────────
+    /// <summary>Loads drive configurations and populates <see cref="DriveRows"/>.</summary>
     public void LoadDrives()
     {
         DriveRows.Clear();
@@ -408,6 +449,7 @@ public class MainViewModel : ObservableObject
         }
     }
 
+    /// <summary>Reloads drive configurations and refreshes all statuses.</summary>
     public void ReloadDrives()
     {
         _dispatcher.Invoke(() =>
@@ -419,7 +461,7 @@ public class MainViewModel : ObservableObject
         Task.Run(RefreshAllServerPingsAsync);
     }
 
-    // ── Drive operations ─────────────────────────────────────────────
+    /// <summary>Triggers an async status refresh for all drives.</summary>
     private void OnRefreshStatus()
     {
         if (IsBusy) return;
@@ -431,6 +473,7 @@ public class MainViewModel : ObservableObject
         });
     }
 
+    /// <summary>Checks connection status of all drives in parallel.</summary>
     private async Task RefreshAllStatusesAsync()
     {
         var tasks = DriveRows.Select(row => Task.Run(() =>
@@ -457,6 +500,7 @@ public class MainViewModel : ObservableObject
         await Task.WhenAll(tasks);
     }
 
+    /// <summary>Connects or disconnects a single drive.</summary>
     private void OnToggleDrive(DriveRowViewModel? row)
     {
         if (row == null || IsBusy) return;
@@ -520,6 +564,7 @@ public class MainViewModel : ObservableObject
         });
     }
 
+    /// <summary>Connects all disconnected drives.</summary>
     private void OnConnectAll()
     {
         if (string.IsNullOrWhiteSpace(Username) || string.IsNullOrEmpty(Password))
@@ -577,6 +622,7 @@ public class MainViewModel : ObservableObject
         });
     }
 
+    /// <summary>Disconnects all connected drives.</summary>
     private void OnDisconnectAll()
     {
         IsBusy = true;
@@ -612,7 +658,7 @@ public class MainViewModel : ObservableObject
         });
     }
 
-    // ── Server checks ────────────────────────────────────────────────
+    /// <summary>Checks server reachability for a drive's server.</summary>
     private void OnCheckServer(DriveRowViewModel? row)
     {
         if (row == null) return;
@@ -636,6 +682,7 @@ public class MainViewModel : ObservableObject
         });
     }
 
+    /// <summary>Pings all unique servers in parallel and updates reachability.</summary>
     private async Task RefreshAllServerPingsAsync()
     {
         // Group by server to avoid duplicate checks
@@ -663,7 +710,7 @@ public class MainViewModel : ObservableObject
         await Task.WhenAll(tasks);
     }
 
-    // ── Background monitor ───────────────────────────────────────────
+    /// <summary>Background task that checks for unexpected drive disconnections.</summary>
     private void MonitorDrives()
     {
         var connectedRows = DriveRows.Where(r => r.IsConnected).ToList();
@@ -700,7 +747,7 @@ public class MainViewModel : ObservableObject
         Task.WaitAll(tasks);
     }
 
-    // ── Warnings ─────────────────────────────────────────────────────
+    /// <summary>Adds or updates a warning in the warnings panel.</summary>
     private void AddWarning(string key, string message)
     {
         var existing = Warnings.FirstOrDefault(w => w.Key == key);
@@ -712,20 +759,23 @@ public class MainViewModel : ObservableObject
         Warnings.Add(new WarningItem { Key = key, Message = $"\u26A0  {message}" });
     }
 
+    /// <summary>Removes a warning by its key.</summary>
     private void ClearWarning(string key)
     {
         var item = Warnings.FirstOrDefault(w => w.Key == key);
         if (item != null) Warnings.Remove(item);
     }
 
+    /// <summary>Dismisses a warning by key (user-triggered).</summary>
     private void DismissWarning(string? key)
     {
         if (key != null) ClearWarning(key);
     }
 
+    /// <summary>Removes all warnings from the panel.</summary>
     private void ClearAllWarnings() => Warnings.Clear();
 
-    // ── Status bar ───────────────────────────────────────────────────
+    /// <summary>Updates the status bar message and color.</summary>
     public void SetStatus(string message, string level = "info")
     {
         StatusMessage = message;
@@ -737,7 +787,7 @@ public class MainViewModel : ObservableObject
         };
     }
 
-    // ── Cleanup ──────────────────────────────────────────────────────
+    /// <summary>Disposes the background monitor timer.</summary>
     public void Dispose()
     {
         _monitorTimer?.Dispose();

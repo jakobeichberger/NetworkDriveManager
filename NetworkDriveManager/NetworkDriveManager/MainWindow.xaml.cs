@@ -13,8 +13,12 @@ namespace NetworkDriveManager;
 /// </summary>
 public partial class MainWindow : Window
 {
+    /// <summary>The main ViewModel bound to this window.</summary>
     private readonly MainViewModel _vm;
 
+    /// <summary>
+    /// Initializes the main window, creates the ViewModel, and wires up events.
+    /// </summary>
     public MainWindow()
     {
         InitializeComponent();
@@ -37,24 +41,36 @@ public partial class MainWindow : Window
         Closed += (_, _) => _vm.Dispose();
     }
 
+    /// <summary>
+    /// Syncs the PasswordBox value to the ViewModel (WPF PasswordBox cannot use binding).
+    /// </summary>
     private void PasswordBox_PasswordChanged(object sender, RoutedEventArgs e)
     {
         if (DataContext is MainViewModel vm)
             vm.Password = ((PasswordBox)sender).Password;
     }
 
+    /// <summary>
+    /// Opens the Settings dialog as a modal window.
+    /// </summary>
     private void OnSettingsRequested()
     {
         var dialog = new SettingsDialog(_vm) { Owner = this };
         dialog.ShowDialog();
     }
 
+    /// <summary>
+    /// Opens the Help dialog as a modal window.
+    /// </summary>
     private void OnHelpRequested()
     {
         var dialog = new HelpDialog(_vm.Lang) { Owner = this };
         dialog.ShowDialog();
     }
 
+    /// <summary>
+    /// Displays a message box with the appropriate icon based on the message type.
+    /// </summary>
     private void OnMessageBoxRequested(string title, string message, string type)
     {
         var icon = type switch
@@ -66,6 +82,9 @@ public partial class MainWindow : Window
         MessageBox.Show(this, message, title, MessageBoxButton.OK, icon);
     }
 
+    /// <summary>
+    /// Searches for logo.png near the executable and loads it into the header image.
+    /// </summary>
     private void LoadLogo()
     {
         try

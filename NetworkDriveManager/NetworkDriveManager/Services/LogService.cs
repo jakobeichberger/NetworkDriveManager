@@ -13,11 +13,18 @@ public static class LogService
     private const long MaxFileSize = 1_000_000; // 1 MB
     private const int BackupCount = 3;
 
+    /// <summary>Log a message at DEBUG level.</summary>
     public static void Debug(string message) => Write("DEBUG", message);
+    /// <summary>Log a message at INFO level.</summary>
     public static void Info(string message) => Write("INFO", message);
+    /// <summary>Log a message at WARNING level.</summary>
     public static void Warning(string message) => Write("WARNING", message);
+    /// <summary>Log a message at ERROR level.</summary>
     public static void Error(string message) => Write("ERROR", message);
 
+    /// <summary>
+    /// Write a timestamped log entry to the log file, rotating if necessary.
+    /// </summary>
     private static void Write(string level, string message)
     {
         lock (_lock)
@@ -36,6 +43,10 @@ public static class LogService
         }
     }
 
+    /// <summary>
+    /// Rotate the log file when it exceeds <see cref="MaxFileSize"/>, keeping up to
+    /// <see cref="BackupCount"/> backup copies.
+    /// </summary>
     private static void RotateIfNeeded()
     {
         try
@@ -90,6 +101,9 @@ public static class LogService
         return lines;
     }
 
+    /// <summary>
+    /// Read lines containing [ERROR] or [WARNING] from a single log file.
+    /// </summary>
     private static IEnumerable<string> ReadFilteredLines(string path)
     {
         string[] fileLines;

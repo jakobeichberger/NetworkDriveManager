@@ -15,11 +15,17 @@ namespace NetworkDriveManager.Views;
 /// </summary>
 public class SettingsDriveRow : ObservableObject
 {
+    /// <summary>Gets or sets the drive letter (A-Z).</summary>
     public string Letter { get; set; } = string.Empty;
+    /// <summary>Gets or sets the file server hostname or IP address.</summary>
     public string Server { get; set; } = string.Empty;
+    /// <summary>Gets or sets the SMB share name.</summary>
     public string Share { get; set; } = string.Empty;
+    /// <summary>Gets or sets the friendly display name for the drive.</summary>
     public string Label { get; set; } = string.Empty;
+    /// <summary>Gets or sets whether the drive is hidden from the main window.</summary>
     public bool Hidden { get; set; }
+    /// <summary>Gets a check-mark string for the hidden column display.</summary>
     public string HiddenDisplay => Hidden ? "\u2713" : "";
 }
 
@@ -28,8 +34,10 @@ public class SettingsDriveRow : ObservableObject
 /// </summary>
 public class SettingsViewModel : ObservableObject
 {
+    /// <summary>Current UI language code used for translations.</summary>
     private readonly string _lang;
 
+    /// <summary>Initializes the view model with the specified language and existing drive configurations.</summary>
     public SettingsViewModel(string lang, List<DriveConfig> drives)
     {
         _lang = lang;
@@ -41,37 +49,58 @@ public class SettingsViewModel : ObservableObject
             });
     }
 
+    /// <summary>Returns the translated string for the given key.</summary>
     private string T(string key) => Translations.Get(_lang, key);
 
-    // Translated properties
+    /// <summary>Gets the translated settings dialog title.</summary>
     public string SettingsTitle => T("settings_title");
+    /// <summary>Gets the translated drive letter column header.</summary>
     public string LetterHeader => T("drive_letter");
+    /// <summary>Gets the translated server address column header.</summary>
     public string ServerHeader => T("server_address");
+    /// <summary>Gets the translated share name column header.</summary>
     public string ShareHeader => T("share_name");
+    /// <summary>Gets the translated label column header.</summary>
     public string LabelHeader => T("label");
+    /// <summary>Gets the translated hidden column header.</summary>
     public string HiddenHeader => T("hidden");
+    /// <summary>Gets the translated new drive button text.</summary>
     public string NewText => T("new_drive");
+    /// <summary>Gets the translated add drive button text.</summary>
     public string AddText => T("add_drive");
+    /// <summary>Gets the translated edit drive button text.</summary>
     public string EditText => T("edit_drive");
+    /// <summary>Gets the translated remove drive button text.</summary>
     public string RemoveText => T("remove_drive");
+    /// <summary>Gets the translated import drives button text.</summary>
     public string ImportText => T("import_drives");
+    /// <summary>Gets the translated save button text.</summary>
     public string SaveText => T("save");
+    /// <summary>Gets the translated cancel button text.</summary>
     public string CancelText => T("cancel");
+    /// <summary>Gets the translated log section title.</summary>
     public string LogTitle => T("log_title");
+    /// <summary>Gets the translated log refresh button text.</summary>
     public string LogRefreshText => T("log_refresh");
+    /// <summary>Gets the translated log clear button text.</summary>
     public string LogClearText => T("log_clear");
+    /// <summary>Gets the translated log export CSV button text.</summary>
     public string LogExportCsvText => T("log_export_csv");
+    /// <summary>Gets the translated log file path label.</summary>
     public string LogFileLabel => string.Format(T("log_file_label"), ConfigService.LogFilePath);
 
-    // Form
+    /// <summary>Backing field for <see cref="FormTitle"/>.</summary>
     private string _formTitle = string.Empty;
+    /// <summary>Gets or sets the title of the add/edit form section.</summary>
     public string FormTitle
     {
         get => string.IsNullOrEmpty(_formTitle) ? T("form_add_title") : _formTitle;
         set => SetProperty(ref _formTitle, value);
     }
 
+    /// <summary>Backing field for <see cref="FormLetter"/>.</summary>
     private string _formLetter = string.Empty;
+    /// <summary>Gets or sets the drive letter form field value.</summary>
     public string FormLetter
     {
         get => _formLetter;
@@ -86,7 +115,9 @@ public class SettingsViewModel : ObservableObject
         }
     }
 
+    /// <summary>Backing field for <see cref="FormServer"/>.</summary>
     private string _formServer = string.Empty;
+    /// <summary>Gets or sets the server address form field value.</summary>
     public string FormServer
     {
         get => _formServer;
@@ -101,7 +132,9 @@ public class SettingsViewModel : ObservableObject
         }
     }
 
+    /// <summary>Backing field for <see cref="FormShare"/>.</summary>
     private string _formShare = string.Empty;
+    /// <summary>Gets or sets the share name form field value.</summary>
     public string FormShare
     {
         get => _formShare;
@@ -116,7 +149,9 @@ public class SettingsViewModel : ObservableObject
         }
     }
 
+    /// <summary>Backing field for <see cref="FormLabel"/>.</summary>
     private string _formLabel = string.Empty;
+    /// <summary>Gets or sets the label form field value.</summary>
     public string FormLabel
     {
         get => _formLabel;
@@ -131,14 +166,16 @@ public class SettingsViewModel : ObservableObject
         }
     }
 
+    /// <summary>Backing field for <see cref="FormHidden"/>.</summary>
     private bool _formHidden;
+    /// <summary>Gets or sets the hidden checkbox form field value.</summary>
     public bool FormHidden
     {
         get => _formHidden;
         set => SetProperty(ref _formHidden, value);
     }
 
-    // Validation hints
+    /// <summary>Gets the validation hint text for the drive letter field.</summary>
     public string LetterHint
     {
         get
@@ -148,26 +185,39 @@ public class SettingsViewModel : ObservableObject
                 ? T("letter_hint_valid") : T("letter_hint_invalid");
         }
     }
+    /// <summary>Gets the color for the drive letter validation hint text.</summary>
     public string LetterHintColor => string.IsNullOrWhiteSpace(FormLetter) ? "#6b7280"
         : (FormLetter.Trim().Length == 1 && char.IsLetter(FormLetter.Trim()[0]) ? "#2e7d32" : "#b71c1c");
+    /// <summary>Gets the color for the drive letter validation indicator.</summary>
     public string LetterIndicatorColor => LetterHintColor;
 
+    /// <summary>Gets the validation hint text for the server field.</summary>
     public string ServerHint => string.IsNullOrWhiteSpace(FormServer) ? T("server_hint") : T("server_hint_valid");
+    /// <summary>Gets the color for the server validation hint text.</summary>
     public string ServerHintColor => string.IsNullOrWhiteSpace(FormServer) ? "#6b7280" : "#2e7d32";
+    /// <summary>Gets the color for the server validation indicator.</summary>
     public string ServerIndicatorColor => ServerHintColor;
 
+    /// <summary>Gets the validation hint text for the share field.</summary>
     public string ShareHint => string.IsNullOrWhiteSpace(FormShare) ? T("share_hint") : T("share_hint_valid");
+    /// <summary>Gets the color for the share validation hint text.</summary>
     public string ShareHintColor => string.IsNullOrWhiteSpace(FormShare) ? "#6b7280" : "#2e7d32";
+    /// <summary>Gets the color for the share validation indicator.</summary>
     public string ShareIndicatorColor => ShareHintColor;
 
+    /// <summary>Gets the validation hint text for the label field.</summary>
     public string LabelHint => string.IsNullOrWhiteSpace(FormLabel) ? T("label_hint") : T("label_hint_valid");
+    /// <summary>Gets the color for the label validation hint text.</summary>
     public string LabelHintColor => string.IsNullOrWhiteSpace(FormLabel) ? "#6b7280" : "#2e7d32";
+    /// <summary>Gets the color for the label validation indicator.</summary>
     public string LabelIndicatorColor => LabelHintColor;
 
-    // Drive list
+    /// <summary>Gets the observable collection of drive configuration rows.</summary>
     public ObservableCollection<SettingsDriveRow> Drives { get; } = new();
 
+    /// <summary>Backing field for <see cref="SelectedDrive"/>.</summary>
     private SettingsDriveRow? _selectedDrive;
+    /// <summary>Gets or sets the currently selected drive in the data grid.</summary>
     public SettingsDriveRow? SelectedDrive
     {
         get => _selectedDrive;
@@ -186,8 +236,10 @@ public class SettingsViewModel : ObservableObject
         }
     }
 
+    /// <summary>Gets or sets the index of the drive being edited, or -1 if adding a new drive.</summary>
     public int EditingIndex { get; set; } = -1;
 
+    /// <summary>Resets all form fields and editing state to defaults.</summary>
     public void ClearForm()
     {
         FormLetter = string.Empty;
@@ -200,6 +252,7 @@ public class SettingsViewModel : ObservableObject
         SelectedDrive = null;
     }
 
+    /// <summary>Converts the drive rows to a list of <see cref="DriveConfig"/> for saving.</summary>
     public List<DriveConfig> ToDriveConfigs()
     {
         return Drives.Select(d => new DriveConfig
@@ -218,9 +271,12 @@ public class SettingsViewModel : ObservableObject
 /// </summary>
 public partial class SettingsDialog : Window
 {
+    /// <summary>Reference to the main window ViewModel.</summary>
     private readonly MainViewModel _mainVm;
+    /// <summary>Settings dialog ViewModel instance.</summary>
     private readonly SettingsViewModel _vm;
 
+    /// <summary>Initializes the settings dialog and loads the current drive configuration.</summary>
     public SettingsDialog(MainViewModel mainVm)
     {
         InitializeComponent();
@@ -233,6 +289,7 @@ public partial class SettingsDialog : Window
         RefreshLog();
     }
 
+    /// <summary>Clears the form for a new drive entry.</summary>
     private void OnNew(object sender, RoutedEventArgs e)
     {
         _vm.ClearForm();
@@ -279,6 +336,7 @@ public partial class SettingsDialog : Window
         return (letter, server, share, label);
     }
 
+    /// <summary>Validates the form and adds a new drive to the list.</summary>
     private void OnAdd(object sender, RoutedEventArgs e)
     {
         var validated = ValidateForm();
@@ -292,6 +350,7 @@ public partial class SettingsDialog : Window
         _vm.ClearForm();
     }
 
+    /// <summary>Validates the form and updates the currently selected drive.</summary>
     private void OnEdit(object sender, RoutedEventArgs e)
     {
         if (_vm.EditingIndex < 0 || _vm.EditingIndex >= _vm.Drives.Count) return;
@@ -307,6 +366,7 @@ public partial class SettingsDialog : Window
         _vm.ClearForm();
     }
 
+    /// <summary>Removes the selected drive from the list after user confirmation.</summary>
     private void OnRemove(object sender, RoutedEventArgs e)
     {
         if (_vm.SelectedDrive == null) return;
@@ -324,6 +384,7 @@ public partial class SettingsDialog : Window
         }
     }
 
+    /// <summary>Imports drive configurations from a batch (.bat/.cmd) file.</summary>
     private void OnImport(object sender, RoutedEventArgs e)
     {
         var lang = _mainVm.Lang;
@@ -379,6 +440,7 @@ public partial class SettingsDialog : Window
         }
     }
 
+    /// <summary>Saves the drive configuration and closes the dialog.</summary>
     private void OnSave(object sender, RoutedEventArgs e)
     {
         var lang = _mainVm.Lang;
@@ -401,13 +463,14 @@ public partial class SettingsDialog : Window
         }
     }
 
+    /// <summary>Closes the dialog without saving changes.</summary>
     private void OnCancel(object sender, RoutedEventArgs e)
     {
         DialogResult = false;
         Close();
     }
 
-    // ── Log section ──────────────────────────────────────────────────
+    /// <summary>Reloads error and warning log entries into the log text box.</summary>
     private void RefreshLog()
     {
         var entries = LogService.ReadErrorWarningEntries();
@@ -418,8 +481,10 @@ public partial class SettingsDialog : Window
         LogTextBox.ScrollToEnd();
     }
 
+    /// <summary>Handles the log refresh button click event.</summary>
     private void OnLogRefresh(object sender, RoutedEventArgs e) => RefreshLog();
 
+    /// <summary>Clears all log files after user confirmation.</summary>
     private void OnLogClear(object sender, RoutedEventArgs e)
     {
         var lang = _mainVm.Lang;
@@ -432,6 +497,7 @@ public partial class SettingsDialog : Window
         }
     }
 
+    /// <summary>Exports log entries to a CSV file chosen by the user.</summary>
     private void OnLogExportCsv(object sender, RoutedEventArgs e)
     {
         var lang = _mainVm.Lang;
