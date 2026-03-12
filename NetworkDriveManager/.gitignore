@@ -1,0 +1,27 @@
+## .NET / Visual Studio
+bin/
+obj/
+*.user
+*.suo
+*.userprefs
+.vs/
+
+## Build output
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Bb]uild[Ll]og.*
+
+## NuGet
+**/packages/*
+*.nupkg
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+## Application runtime files
+credentials.enc
+secret.key
+network_drive_manager.log
+network_drive_manager.log.*

@@ -1,0 +1,22 @@
+{
+  "drives": [
+    {
+      "letter": "H",
+      "server": "fileserver.example.local",
+      "share": "Documents",
+      "label": "Documents"
+    },
+    {
+      "letter": "I",
+      "server": "fileserver.example.local",
+      "share": "Projects",
+      "label": "Projects"
+    },
+    {
+      "letter": "J",
+      "server": "fileserver.example.local",
+      "share": "Shared",
+      "label": "Shared Files"
+    }
+  ]
+}
