@@ -184,6 +184,16 @@ NetworkDriveManager/
     └── Views/                      # Avalonia dialogs (Settings, Help)
 ```
 
+## Documentation
+
+For detailed documentation, visit the [**Project Site**](https://jakobeichberger.github.io/NetworkDriveManager/):
+
+- [Installation Guide](https://jakobeichberger.github.io/NetworkDriveManager/installation) — platform-specific download and install instructions
+- [Configuration](https://jakobeichberger.github.io/NetworkDriveManager/configuration) — drive definitions and settings reference
+- [Architecture](https://jakobeichberger.github.io/NetworkDriveManager/architecture) — MVVM pattern, project structure, and CI/CD pipeline
+- [Security](https://jakobeichberger.github.io/NetworkDriveManager/security) — credential encryption and data protection
+- [Troubleshooting](https://jakobeichberger.github.io/NetworkDriveManager/troubleshooting) — common problems and solutions
+
 ## Contributing
 
 Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
