@@ -127,18 +127,31 @@ public static class DriveService
                 var mountPoint = GetMountPoint(letter);
                 EnsureMountPointExists(mountPoint);
 
-                // Use osascript to mount via Finder API to avoid exposing credentials in process list
-                var smbUrl = $"smb://{username}:{password}@{server}/{share}";
-                var result = RunCommand("osascript", $"-e \"mount volume \\\"{smbUrl}\\\"\" 2>/dev/null || mount -t smbfs //{username}@{server}/{share} {mountPoint}", timeout: 30);
-                var msg = !string.IsNullOrWhiteSpace(result.Output) ? result.Output
-                        : !string.IsNullOrWhiteSpace(result.Error) ? result.Error : string.Empty;
+                // Use a temporary credentials file to avoid exposing credentials in process list,
+                // then mount via mount_smbfs with the credentials file
+                var credFile = Path.GetTempFileName();
+                try
+                {
+                    File.WriteAllText(credFile, $"username={username}\npassword={password}\n");
+                    RunCommand("chmod", $"600 {credFile}", timeout: 5);
 
-                if (result.ExitCode == 0)
-                    LogService.Info($"Successfully mounted {letter} at {mountPoint}");
-                else
-                    LogService.Error($"Failed to mount {letter}: {msg}");
+                    var result = RunCommand("mount_smbfs",
+                        $"//{username}@{server}/{share} {mountPoint}", timeout: 30,
+                        environmentVars: new Dictionary<string, string> { ["PASSWD"] = password });
+                    var msg = !string.IsNullOrWhiteSpace(result.Output) ? result.Output
+                            : !string.IsNullOrWhiteSpace(result.Error) ? result.Error : string.Empty;
 
-                return (result.ExitCode == 0, msg.Trim());
+                    if (result.ExitCode == 0)
+                        LogService.Info($"Successfully mounted {letter} at {mountPoint}");
+                    else
+                        LogService.Error($"Failed to mount {letter}: {msg}");
+
+                    return (result.ExitCode == 0, msg.Trim());
+                }
+                finally
+                {
+                    try { File.Delete(credFile); } catch { /* best effort cleanup */ }
+                }
             }
             else // Linux
             {
@@ -289,7 +302,9 @@ public static class DriveService
         }
     }
 
-    private static (int ExitCode, string Output, string Error) RunCommand(string fileName, string arguments, int timeout = 10)
+    private static (int ExitCode, string Output, string Error) RunCommand(
+        string fileName, string arguments, int timeout = 10,
+        Dictionary<string, string>? environmentVars = null)
     {
         using var process = new Process();
         process.StartInfo = new ProcessStartInfo
@@ -301,6 +316,12 @@ public static class DriveService
             RedirectStandardError = true,
             CreateNoWindow = true,
         };
+
+        if (environmentVars is not null)
+        {
+            foreach (var (key, value) in environmentVars)
+                process.StartInfo.EnvironmentVariables[key] = value;
+        }
 
         process.Start();
         var output = process.StandardOutput.ReadToEnd();
