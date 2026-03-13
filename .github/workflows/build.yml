@@ -80,6 +80,14 @@ jobs:
         run: |
           cp installers/${{ matrix.installer_script }} ./publish/${{ matrix.artifact }}/
           cp installers/${{ matrix.uninstaller_script }} ./publish/${{ matrix.artifact }}/
+          # Include update scripts
+          if [[ "${{ matrix.rid }}" == "win-x64" ]]; then
+            cp installers/update.ps1 ./publish/${{ matrix.artifact }}/
+          elif [[ "${{ matrix.rid }}" == osx-* ]]; then
+            cp installers/update-macos.sh ./publish/${{ matrix.artifact }}/
+          elif [[ "${{ matrix.rid }}" == "linux-x64" ]]; then
+            cp installers/update-linux.sh ./publish/${{ matrix.artifact }}/
+          fi
 
       - name: Archive (Windows)
         if: runner.os == 'Windows'
@@ -90,6 +98,10 @@ jobs:
         run: |
           chmod +x ./publish/${{ matrix.artifact }}/${{ matrix.installer_script }}
           chmod +x ./publish/${{ matrix.artifact }}/${{ matrix.uninstaller_script }}
+          # Make update scripts executable if present
+          for f in ./publish/${{ matrix.artifact }}/update-*.sh; do
+            [ -f "$f" ] && chmod +x "$f"
+          done
           cd ./publish && tar -czf ../${{ matrix.artifact }}.tar.gz ${{ matrix.artifact }}
 
       - name: Upload build artifact

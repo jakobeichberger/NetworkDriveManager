@@ -240,6 +240,82 @@ public static class DriveService
     }
 
     /// <summary>
+    /// Checks whether the user has write access to a connected drive.
+    /// Returns true if read/write, false if read-only, null if unable to determine.
+    /// </summary>
+    public static bool? HasWriteAccess(string letter)
+    {
+        try
+        {
+            var mountPoint = GetMountPoint(letter);
+
+            if (PlatformService.IsWindows)
+            {
+                // Try creating a temporary file to test write access
+                var testFile = Path.Combine(mountPoint, $".ndm_write_test_{Guid.NewGuid():N}");
+                try
+                {
+                    File.WriteAllText(testFile, "test");
+                    File.Delete(testFile);
+                    LogService.Debug($"Drive {letter}: has read/write access");
+                    return true;
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    LogService.Debug($"Drive {letter}: has read-only access");
+                    return false;
+                }
+                catch (IOException)
+                {
+                    LogService.Debug($"Drive {letter}: has read-only access");
+                    return false;
+                }
+            }
+            else
+            {
+                // On macOS/Linux, check mount options for ro/rw
+                var result = RunCommand("mount", "");
+                var escapedMount = Regex.Escape(mountPoint);
+                var match = Regex.Match(result.Output, $@"on\s+{escapedMount}\s.*?\(([^)]*)\)");
+                if (match.Success)
+                {
+                    var options = match.Groups[1].Value;
+                    if (options.Contains("ro,") || options.Contains(",ro") || options.StartsWith("ro"))
+                    {
+                        LogService.Debug($"Drive {letter}: mounted read-only (mount options)");
+                        return false;
+                    }
+                    if (options.Contains("rw,") || options.Contains(",rw") || options.StartsWith("rw"))
+                    {
+                        LogService.Debug($"Drive {letter}: mounted read/write (mount options)");
+                        return true;
+                    }
+                }
+
+                // Fallback: try writing a temp file
+                var testFile = Path.Combine(mountPoint, $".ndm_write_test_{Guid.NewGuid():N}");
+                try
+                {
+                    File.WriteAllText(testFile, "test");
+                    File.Delete(testFile);
+                    LogService.Debug($"Drive {letter}: has read/write access (write test)");
+                    return true;
+                }
+                catch
+                {
+                    LogService.Debug($"Drive {letter}: has read-only access (write test failed)");
+                    return false;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            LogService.Warning($"Could not determine permissions for drive {letter}: {ex.Message}");
+            return null;
+        }
+    }
+
+    /// <summary>
     /// Parse 'net use' lines from a batch file and return (drives, skippedCount).
     /// </summary>
     public static (List<Models.DriveConfig> Drives, int Skipped) ParseBatDrives(string content)
