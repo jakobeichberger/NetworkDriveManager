@@ -252,7 +252,7 @@ public static class DriveService
             if (PlatformService.IsWindows)
             {
                 // Try creating a temporary file to test write access
-                var testFile = Path.Combine(mountPoint + Path.DirectorySeparatorChar, $".ndm_write_test_{Guid.NewGuid():N}");
+                var testFile = Path.Combine(mountPoint, $".ndm_write_test_{Guid.NewGuid():N}");
                 try
                 {
                     File.WriteAllText(testFile, "test");
