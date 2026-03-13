@@ -33,6 +33,8 @@ public class DriveRowViewModel : ObservableObject
                 OnPropertyChanged(nameof(StatusColor));
                 OnPropertyChanged(nameof(ToggleButtonText));
                 OnPropertyChanged(nameof(ToggleButtonColor));
+                OnPropertyChanged(nameof(ServerCheckText));
+                OnPropertyChanged(nameof(ServerCheckColor));
             }
         }
     }
@@ -45,6 +47,21 @@ public class DriveRowViewModel : ObservableObject
         set
         {
             if (SetProperty(ref _serverReachable, value))
+            {
+                OnPropertyChanged(nameof(ServerCheckText));
+                OnPropertyChanged(nameof(ServerCheckColor));
+            }
+        }
+    }
+
+    private bool? _drivePermission;
+    /// <summary>Drive permission state: null = not checked, true = read/write, false = read-only.</summary>
+    public bool? DrivePermission
+    {
+        get => _drivePermission;
+        set
+        {
+            if (SetProperty(ref _drivePermission, value))
             {
                 OnPropertyChanged(nameof(ServerCheckText));
                 OnPropertyChanged(nameof(ServerCheckColor));
@@ -92,12 +109,25 @@ public class DriveRowViewModel : ObservableObject
     /// <summary>Color code for the toggle button.</summary>
     public string ToggleButtonColor => IsConnected ? "#2e7d32" : "#b71c1c";
 
-    /// <summary>Localized server check status text.</summary>
+    /// <summary>Localized server check / permission status text.</summary>
     public string ServerCheckText
     {
         get
         {
             if (IsCheckingServer) return Translations.Get(Lang, "working");
+
+            if (IsConnected)
+            {
+                // Drive is connected: show permission info
+                return DrivePermission switch
+                {
+                    true => Translations.Get(Lang, "drive_readwrite"),
+                    false => Translations.Get(Lang, "drive_readonly"),
+                    null => Translations.Get(Lang, "server_check_btn"),
+                };
+            }
+
+            // Drive is not connected: show server reachability
             return ServerReachable switch
             {
                 true => Translations.Get(Lang, "server_reachable"),
@@ -107,12 +137,25 @@ public class DriveRowViewModel : ObservableObject
         }
     }
 
-    /// <summary>Color code for the server check status indicator.</summary>
+    /// <summary>Color code for the server check / permission status indicator.</summary>
     public string ServerCheckColor
     {
         get
         {
             if (IsCheckingServer) return "#78909c";
+
+            if (IsConnected)
+            {
+                // Drive is connected: color based on permission
+                return DrivePermission switch
+                {
+                    true => "#2e7d32",    // green for read/write
+                    false => "#e65100",    // orange for read-only
+                    null => "#78909c",     // gray for unchecked
+                };
+            }
+
+            // Drive is not connected: color based on reachability
             return ServerReachable switch
             {
                 true => "#2e7d32",
@@ -136,6 +179,8 @@ public class DriveRowViewModel : ObservableObject
         OnPropertyChanged(nameof(ToggleButtonColor));
         OnPropertyChanged(nameof(StatusText));
         OnPropertyChanged(nameof(StatusColor));
+        OnPropertyChanged(nameof(ServerCheckText));
+        OnPropertyChanged(nameof(ServerCheckColor));
     }
 }
 
@@ -491,9 +536,11 @@ public class MainViewModel : ObservableObject
         var tasks = DriveRows.Select(row => Task.Run(() =>
         {
             var (connected, remote) = DriveService.GetDriveInfo(row.Letter);
+            bool? permission = connected ? DriveService.HasWriteAccess(row.Letter) : null;
             _dispatcher.Invoke(() =>
             {
                 row.IsConnected = connected;
+                row.DrivePermission = permission;
                 if (!connected) ClearWarning($"mismatch_{row.Letter}");
 
                 if (connected)
@@ -542,6 +589,7 @@ public class MainViewModel : ObservableObject
                         if (ok)
                         {
                             row.IsConnected = false;
+                            row.DrivePermission = null;
                             ClearWarning($"mismatch_{row.Letter}");
                         }
                         else
@@ -561,12 +609,21 @@ public class MainViewModel : ObservableObject
 
                     var (ok, msg) = DriveService.ConnectDrive(
                         row.Letter, row.Config.Server, row.Config.Share, username!, password!);
-                    _dispatcher.Invoke(() =>
+                    if (ok)
                     {
-                        if (ok) row.IsConnected = true;
-                        else MessageBoxRequested?.Invoke(T("error"),
-                            string.Format(T("connect_failed"), row.Letter, msg), "error");
-                    });
+                        var permission = DriveService.HasWriteAccess(row.Letter);
+                        _dispatcher.Invoke(() =>
+                        {
+                            row.IsConnected = true;
+                            row.DrivePermission = permission;
+                        });
+                    }
+                    else
+                    {
+                        _dispatcher.Invoke(() =>
+                            MessageBoxRequested?.Invoke(T("error"),
+                                string.Format(T("connect_failed"), row.Letter, msg), "error"));
+                    }
                 }
             }
             finally
@@ -619,7 +676,14 @@ public class MainViewModel : ObservableObject
                     var (ok, msg) = DriveService.ConnectDrive(
                         row.Letter, row.Config.Server, row.Config.Share, username, password);
                     if (ok)
-                        _dispatcher.Invoke(() => row.IsConnected = true);
+                    {
+                        var permission = DriveService.HasWriteAccess(row.Letter);
+                        _dispatcher.Invoke(() =>
+                        {
+                            row.IsConnected = true;
+                            row.DrivePermission = permission;
+                        });
+                    }
                     else
                         errors.Add($"{row.Letter}: {msg}");
                 }
@@ -654,6 +718,7 @@ public class MainViewModel : ObservableObject
                         _dispatcher.Invoke(() =>
                         {
                             row.IsConnected = false;
+                            row.DrivePermission = null;
                             ClearWarning($"mismatch_{row.Letter}");
                         });
                     else
@@ -674,7 +739,7 @@ public class MainViewModel : ObservableObject
         });
     }
 
-    /// <summary>Checks server reachability for a drive's server.</summary>
+    /// <summary>Checks server reachability or drive permissions depending on connection state.</summary>
     private void OnCheckServer(DriveRowViewModel? row)
     {
         if (row == null) return;
@@ -686,22 +751,42 @@ public class MainViewModel : ObservableObject
 
         Task.Run(() =>
         {
-            var reachable = ServerService.IsServerReachable(server);
-            _dispatcher.Invoke(() =>
+            // For connected drives: check permissions
+            // For disconnected drives: check server reachability
+            var connectedOnServer = DriveRows.Where(r => r.Config.Server == server && r.IsConnected).ToList();
+            var disconnectedOnServer = DriveRows.Where(r => r.Config.Server == server && !r.IsConnected).ToList();
+
+            // Check permissions for connected drives
+            foreach (var r in connectedOnServer)
             {
-                foreach (var r in DriveRows.Where(r => r.Config.Server == server))
+                var permission = DriveService.HasWriteAccess(r.Letter);
+                _dispatcher.Invoke(() =>
                 {
-                    r.ServerReachable = reachable;
+                    r.DrivePermission = permission;
                     r.IsCheckingServer = false;
-                }
-            });
+                });
+            }
+
+            // Check reachability for disconnected drives
+            if (disconnectedOnServer.Count > 0)
+            {
+                var reachable = ServerService.IsServerReachable(server);
+                _dispatcher.Invoke(() =>
+                {
+                    foreach (var r in disconnectedOnServer)
+                    {
+                        r.ServerReachable = reachable;
+                        r.IsCheckingServer = false;
+                    }
+                });
+            }
         });
     }
 
-    /// <summary>Pings all unique servers in parallel and updates reachability.</summary>
+    /// <summary>Pings all unique servers in parallel, checks permissions for connected drives.</summary>
     private async Task RefreshAllServerPingsAsync()
     {
-        // Group by server to avoid duplicate checks
+        // Group by server to avoid duplicate reachability checks
         var serverGroups = DriveRows.GroupBy(r => r.Config.Server).ToList();
 
         _dispatcher.Invoke(() =>
@@ -712,15 +797,33 @@ public class MainViewModel : ObservableObject
 
         var tasks = serverGroups.Select(g => Task.Run(() =>
         {
-            var reachable = ServerService.IsServerReachable(g.Key);
-            _dispatcher.Invoke(() =>
+            var connectedRows = g.Where(r => r.IsConnected).ToList();
+            var disconnectedRows = g.Where(r => !r.IsConnected).ToList();
+
+            // Check permissions for connected drives
+            foreach (var row in connectedRows)
             {
-                foreach (var row in g)
+                var permission = DriveService.HasWriteAccess(row.Letter);
+                _dispatcher.Invoke(() =>
                 {
-                    row.ServerReachable = reachable;
+                    row.DrivePermission = permission;
                     row.IsCheckingServer = false;
-                }
-            });
+                });
+            }
+
+            // Check reachability for disconnected drives
+            if (disconnectedRows.Count > 0)
+            {
+                var reachable = ServerService.IsServerReachable(g.Key);
+                _dispatcher.Invoke(() =>
+                {
+                    foreach (var row in disconnectedRows)
+                    {
+                        row.ServerReachable = reachable;
+                        row.IsCheckingServer = false;
+                    }
+                });
+            }
         })).ToArray();
 
         await Task.WhenAll(tasks);
@@ -741,6 +844,7 @@ public class MainViewModel : ObservableObject
                 {
                     if (!row.IsConnected) return; // already handled
                     row.IsConnected = false;
+                    row.DrivePermission = null;
                     var label = row.Config.Label;
                     LogService.Warning($"Drive {row.Letter}: ({label}) disconnected unexpectedly");
                     MessageBoxRequested?.Invoke(T("drive_lost_title"),
@@ -749,6 +853,9 @@ public class MainViewModel : ObservableObject
             }
             else
             {
+                var permission = DriveService.HasWriteAccess(row.Letter);
+                _dispatcher.Invoke(() => row.DrivePermission = permission);
+
                 var expectedUnc = row.Config.UncPath.ToLowerInvariant();
                 if (remote != null && remote.ToLowerInvariant() != expectedUnc)
                 {
